@@ -355,8 +355,7 @@ class UnityParallelEnv(UnityPettingzooBaseEnv, ParallelEnv):
     MODIFICATIONS: Makes Unity's ParallelEnv into a PettingZoo compatible ParallelEnv.
     - reset(...) -> (observations, infos).
     - step(...)  -> (observations, rewards, terminations, truncations, infos)
-    - invert action mask (reset/step)
-    - list -> tuple (reset/step)
+    - Fix Observations: invert action mask (reset/step), list -> tuple (reset/step).
     """
 
     def __init__(self, env: BaseEnv, seed: Optional[int] = None):
@@ -405,26 +404,44 @@ class UnityParallelEnv(UnityPettingzooBaseEnv, ParallelEnv):
         self._live_agents.sort()  # unnecessary, only for passing API test
 
         # Include empty truncations (unity environment never truncates)
-        truncations = {a: False for a in self._rewards.keys()} 
+        terminations = self._dones
+        truncations = {}
+        for agent, info in self.infos.items():
+            if "interrupted" in info and info["interrupted"]:
+                truncations[agent] = True
+                terminations[agent] = False
+            else:
+                truncations[agent] = False
+            
 
         # Fix observations
         observations = self.fix_observations(self._observations)
-        return observations, self._rewards, self._dones, truncations, self._infos
+        return observations, self._rewards, terminations, truncations, self._infos
     
     @staticmethod
     def fix_observations(observations):
         # Invert action mask, turn it into a tuple
         for agent, agent_obs in observations.items():
+            # observation not a dict at truncation (maybe termination as well)
             if not isinstance(agent_obs, dict):
                 agent_obs = {"observation": agent_obs}
                 observations[agent] = agent_obs
+                # NO ACTION MASK IS POSSIBLE, ACCOUNT FOR THAT CASE
             
-            # Invert and tuple
+            # Invert (list->tuple if multi discrete)
             if "action_mask" in agent_obs:
-                observations[agent]["action_mask"] = tuple([(1 - x).astype(np.int8) for x in agent_obs["action_mask"]]) # x bool -> np.int8
+                # List indicates multi discrete
+                if isinstance(agent_obs["action_mask"], list):
+                    agent_obs["action_mask"] = tuple([(1 - x).astype(np.int8) for x in agent_obs["action_mask"]]) # x bool -> np.int8
+                # numpy array indicates discrete
+                elif isinstance(agent_obs["action_mask"], np.ndarray):
+                    agent_obs["action_mask"] = (1 - agent_obs["action_mask"]).astype(np.int8)
+
             # Tuple
             if "observation" in agent_obs and isinstance(agent_obs["observation"], list):
                 agent_obs["observation"] = tuple(agent_obs["observation"])
+            else:
+                raise RuntimeError(f"No Observation Recieved From Unity. Should be impossible: {agent_obs}")
 
         return observations
     
