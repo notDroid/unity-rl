@@ -13,13 +13,15 @@ class GeGLU(nn.Module):
         return x * self.gelu(gate)
 
 class MLPBlock(nn.Module):
-    def __init__(self, features, expansion_factor=3):
+    def __init__(self, features, expansion_factor=8/3):
         super().__init__()
-        expanded_features = features * expansion_factor
+        expanded_features = int(features * expansion_factor)
 
         self.norm = nn.RMSNorm((features,))
         self.geglu = GeGLU(features, expanded_features)
         self.proj_down = nn.Linear(expanded_features, features)
+
+        # TODO: Add last layer feature scaling intialized from eps (starts from ~identity)
 
     def forward(self, x):
         residual = x
