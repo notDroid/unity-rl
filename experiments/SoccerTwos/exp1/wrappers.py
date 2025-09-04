@@ -69,8 +69,16 @@ class ConcatParallelEnv(BaseParallelWrapper):
     @functools.lru_cache(maxsize=None)
     def observation_space(self, agent):
         observation_space = super().observation_space(agent)
+
+        # Flatten (else passthrough)
         if isinstance(observation_space, gym.spaces.Tuple):
-            return gym.spaces.utils.flatten_space(observation_space)
+            observation_space = gym.spaces.utils.flatten_space(observation_space)
+        
+        # Turn into a dict{observation, action_mask}
+        observation_space = gym.spaces.Dict({
+            "observation": observation_space,
+            "action_mask": gym.spaces.MultiBinary(int(self.action_space(agent).n))
+        })
         return observation_space
 
     @functools.lru_cache(maxsize=None)
@@ -79,3 +87,7 @@ class ConcatParallelEnv(BaseParallelWrapper):
         if isinstance(action_space, gym.spaces.MultiDiscrete):
             return gym.spaces.Discrete(np.prod(action_space.nvec))
         return action_space
+    
+    # OVERRIDE BaseParallelWrapper which prohibts accessing attributes starting with _
+    def __getattr__(self, name):
+        return getattr(self.env, name)
