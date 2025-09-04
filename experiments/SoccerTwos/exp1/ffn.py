@@ -5,7 +5,7 @@ class GeGLU(nn.Module):
     def __init__(self, in_features, out_features):
         super().__init__()
         self.linear = nn.Linear(in_features, 2 * out_features)
-        self.gelu = nn.GELU()
+        self.gelu = nn.GELU(approximate='tanh')
 
     def forward(self, x):
         x = self.linear(x)
