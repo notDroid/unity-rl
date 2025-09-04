@@ -50,4 +50,5 @@ class MLP(nn.Module):
         for layer in self.mlp_blocks:
             x = layer(x)
 
-        return self.proj_out(x)
+        x = self.proj_out(x)
+        return x
