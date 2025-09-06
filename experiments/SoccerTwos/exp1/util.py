@@ -440,7 +440,7 @@ class UnityParallelEnv(UnityPettingzooBaseEnv, ParallelEnv):
             # Tuple
             if "observation" in agent_obs and isinstance(agent_obs["observation"], list):
                 agent_obs["observation"] = tuple(agent_obs["observation"])
-            else:
+            elif "observation" not in agent_obs:
                 raise RuntimeError(f"No Observation Recieved From Unity. Should be impossible: {agent_obs}")
 
         return observations
@@ -449,3 +449,53 @@ class UnityParallelEnv(UnityPettingzooBaseEnv, ParallelEnv):
     def unwrapped(self):
         return self
     
+'''
+TorchRL Petting Zoo Wrapper Fix
+'''
+
+import copy
+import torch
+from torchrl.envs.libs.pettingzoo import PettingZooWrapper
+from torchrl.data.tensor_specs import Categorical, OneHot
+
+class SafePettingZooWrapper(PettingZooWrapper):
+    def _update_action_mask(self, td, observation_dict, info_dict):
+        # Make local copies (TorchRL does this too)
+        observation_dict = copy.deepcopy(observation_dict)
+        info_dict = copy.deepcopy(info_dict)
+
+        # Agents that actually act this step
+        agents_acting = self.agents if self.parallel else [self.agent_selection]
+
+        for group, agents in self.group_map.items():
+            if self.has_action_mask[group]:
+                group_mask = td.get((group, "action_mask"))
+                group_mask += True  # start all-True, then refine
+
+                for index, agent in enumerate(agents):
+                    # Safely fetch (some agents may be absent this step)
+                    agent_obs = observation_dict.get(agent, None)
+                    agent_info = info_dict.get(agent, None)
+
+                    # Only set per-action mask for ACTING agents
+                    if isinstance(agent_obs, dict) and "action_mask" in agent_obs:
+                        if agent in agents_acting:
+                            group_mask[index] = torch.as_tensor(
+                                agent_obs["action_mask"], device=self.device, dtype=torch.bool
+                            )
+                        # remove from obs dict so it isn't treated as part of the observation
+                        del agent_obs["action_mask"]
+
+                    elif isinstance(agent_info, dict) and "action_mask" in agent_info:
+                        if agent in agents_acting:
+                            group_mask[index] = torch.as_tensor(
+                                agent_info["action_mask"], device=self.device, dtype=torch.bool
+                            )
+                        del agent_info["action_mask"]
+
+                # Update the spec mask for categorical / one-hot actions
+                group_action_spec = self.input_spec["full_action_spec", group, "action"]
+                if isinstance(group_action_spec, (Categorical, OneHot)):
+                    group_action_spec.update_mask(group_mask.clone())
+
+        return observation_dict, info_dict
