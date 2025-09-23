@@ -356,6 +356,9 @@ class UnityParallelEnv(UnityPettingzooBaseEnv, ParallelEnv):
     - reset(...) -> (observations, infos).
     - step(...)  -> (observations, rewards, terminations, truncations, infos)
     - Fix Observations: invert action mask (reset/step), list -> tuple (reset/step).
+    - Compute truncations from "interrupted" in infos[agent].
+    - Add group rewards to reward from "group_reward" in infos[agent].
+    - Verify dicts and active agents list.
     """
 
     def __init__(self, env: BaseEnv, seed: Optional[int] = None):
@@ -368,7 +371,7 @@ class UnityParallelEnv(UnityPettingzooBaseEnv, ParallelEnv):
         super().__init__(env, seed)
         self.render_mode = None
 
-    def reset(self, seed=None, options=None) -> Dict[str, Any]:
+    def reset(self, seed=None, options=None) -> Tuple:
         """
         Resets the environment.
         """
@@ -378,8 +381,8 @@ class UnityParallelEnv(UnityPettingzooBaseEnv, ParallelEnv):
 
         # Fix observations
         observations = self.fix_observations(self._observations)
-        infos = {agent: {} for agent in observations}
-        return observations, infos
+        infos = {agent: {} for agent in observations.keys()} # Empty infos
+        return observations, infos 
 
     def step(self, actions: Dict[str, Any]) -> Tuple:
         self._assert_loaded()
@@ -403,44 +406,69 @@ class UnityParallelEnv(UnityPettingzooBaseEnv, ParallelEnv):
         self._cleanup_agents()
         self._live_agents.sort()  # unnecessary, only for passing API test
 
-        # Include empty truncations (unity environment never truncates)
-        terminations = self._dones
+
+        ### MODIFICATIONS
+
+        # Fix observations
+        observations = self.fix_observations(self._observations)        
+
+        # Get terminations and truncations, add group reward to reward
+        rewards = self.rewards
+        terminations = self.dones
         truncations = {}
-        for agent, info in self.infos.items():
+        infos = self.infos
+
+        for agent in rewards.keys():
+            # Verify agent presense
+            if agent not in infos or agent not in rewards or agent not in terminations:
+                raise RuntimeError(
+                    f"Agent missing one of (info, rewards, terminations). \
+                    Agent: {agent} Infos: {infos} Rewards: {rewards} Terminations: {terminations}"
+                )
+            info = infos[agent]
+
+            # Get truncation
             if "interrupted" in info and info["interrupted"]:
                 truncations[agent] = True
                 terminations[agent] = False
             else:
                 truncations[agent] = False
             
+            # Add group reward to reward
+            rewards[agent] = float(rewards[agent])
+            if "group_reward" in info:
+                rewards[agent] = rewards[agent] + float(info["group_reward"])
 
-        # Fix observations
-        observations = self.fix_observations(self._observations)
-        return observations, self._rewards, terminations, truncations, self._infos
+        # Verify every active agent has an obervation
+        for agent in self.agents: 
+            if agent not in observations: 
+                raise RuntimeError(f"Active Agent: {agent} has no observation.")
+        
+        return observations, rewards, terminations, truncations, infos
     
-    @staticmethod
-    def fix_observations(observations):
-        # Invert action mask, turn it into a tuple
+    def fix_observations(self, observations):
         for agent, agent_obs in observations.items():
-            # observation not a dict at truncation (maybe termination as well)
+            # DICT observation not a dict at truncation (maybe termination as well)
             if not isinstance(agent_obs, dict):
                 agent_obs = {"observation": agent_obs}
                 observations[agent] = agent_obs
-                # NO ACTION MASK IS POSSIBLE, ACCOUNT FOR THAT CASE
+                # NO ACTION MASK IS POSSIBLE, USER ACCOUNTS FOR THAT CASE
             
+            # ACTION MASK
             # Invert (list->tuple if multi discrete)
             if "action_mask" in agent_obs:
                 # List indicates multi discrete
-                if isinstance(agent_obs["action_mask"], list):
+                if isinstance(agent_obs["action_mask"], list) or isinstance(agent_obs["action_mask"], tuple):
                     agent_obs["action_mask"] = tuple([(1 - x).astype(np.int8) for x in agent_obs["action_mask"]]) # x bool -> np.int8
                 # numpy array indicates discrete
                 elif isinstance(agent_obs["action_mask"], np.ndarray):
                     agent_obs["action_mask"] = (1 - agent_obs["action_mask"]).astype(np.int8)
 
-            # Tuple
-            if "observation" in agent_obs and isinstance(agent_obs["observation"], list):
-                agent_obs["observation"] = tuple(agent_obs["observation"])
-            elif "observation" not in agent_obs:
+            # OBSERVATION
+            if "observation" in agent_obs:
+                if isinstance(agent_obs["observation"], list):
+                    agent_obs["observation"] = tuple(agent_obs["observation"])
+            else:
                 raise RuntimeError(f"No Observation Recieved From Unity. Should be impossible: {agent_obs}")
 
         return observations
@@ -448,54 +476,3 @@ class UnityParallelEnv(UnityPettingzooBaseEnv, ParallelEnv):
     @property
     def unwrapped(self):
         return self
-    
-'''
-TorchRL Petting Zoo Wrapper Fix
-'''
-
-import copy
-import torch
-from torchrl.envs.libs.pettingzoo import PettingZooWrapper
-from torchrl.data.tensor_specs import Categorical, OneHot
-
-class SafePettingZooWrapper(PettingZooWrapper):
-    def _update_action_mask(self, td, observation_dict, info_dict):
-        # Make local copies (TorchRL does this too)
-        observation_dict = copy.deepcopy(observation_dict)
-        info_dict = copy.deepcopy(info_dict)
-
-        # Agents that actually act this step
-        agents_acting = self.agents if self.parallel else [self.agent_selection]
-
-        for group, agents in self.group_map.items():
-            if self.has_action_mask[group]:
-                group_mask = td.get((group, "action_mask"))
-                group_mask += True  # start all-True, then refine
-
-                for index, agent in enumerate(agents):
-                    # Safely fetch (some agents may be absent this step)
-                    agent_obs = observation_dict.get(agent, None)
-                    agent_info = info_dict.get(agent, None)
-
-                    # Only set per-action mask for ACTING agents
-                    if isinstance(agent_obs, dict) and "action_mask" in agent_obs:
-                        if agent in agents_acting:
-                            group_mask[index] = torch.as_tensor(
-                                agent_obs["action_mask"], device=self.device, dtype=torch.bool
-                            )
-                        # remove from obs dict so it isn't treated as part of the observation
-                        del agent_obs["action_mask"]
-
-                    elif isinstance(agent_info, dict) and "action_mask" in agent_info:
-                        if agent in agents_acting:
-                            group_mask[index] = torch.as_tensor(
-                                agent_info["action_mask"], device=self.device, dtype=torch.bool
-                            )
-                        del agent_info["action_mask"]
-
-                # Update the spec mask for categorical / one-hot actions
-                group_action_spec = self.input_spec["full_action_spec", group, "action"]
-                if isinstance(group_action_spec, (Categorical, OneHot)):
-                    group_action_spec.update_mask(group_mask.clone())
-
-        return observation_dict, info_dict
