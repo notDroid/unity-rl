@@ -1,3 +1,7 @@
+'''
+Usage: python main [train/test/plot/play] name
+'''
+
 import os
 import torch
 import argparse
@@ -17,10 +21,10 @@ def parse_args():
 
     parser.add_argument("method", type=str, default="train", help="\"train\" or \"test\"", choices=("train", "test", "plot", "play"))
     parser.add_argument("name", type=str, default="testrun0", help="model to use (from ckpt/model directory)")
-    parser.add_argument("--model_config", required=False, type=str, default=config.DEFAULT_MODEL_CONFIG, 
-        help="select model config from config.py (add your own)", choices=config.MODEL_CONFIGS)
-    parser.add_argument("--train_config", required=False, type=str, default=config.DEFAULT_TRAIN_CONFIG, 
-        help="select train config from config.py (add your own)", choices=config.TRAIN_CONFIGS)
+    parser.add_argument("--model_config", required=False, type=str, default="default_model_config", 
+        help="select model config from config.py (add your own)", choices=config.MODEL_CONFIG_LIST)
+    parser.add_argument("--train_config", required=False, type=str, default="default_train_config", 
+        help="select train config from config.py (add your own)", choices=config.TRAIN_CONFIG_LIST)
     parser.add_argument("--continue_training", required=False, type=bool, default=True, help="continue training or reset")
     parser.add_argument("--test_timestamps", required=False, type=str, default=DEFAULT_TEST_TIMESTAMPS, help="specify max test timestamps. default: 100")
     parser.add_argument("--workers", required=False, type=int, help="default inferred")
@@ -35,7 +39,7 @@ def parse_args():
 
 def start_train(args):
     # Create trian config
-    train_config = args["train_config"].copy()
+    train_config = config.TRAIN_CONFIGS[args["train_config"]].copy()
     # Overwrite
     for key in args:
         if args[key] is not None:
@@ -45,7 +49,7 @@ def start_train(args):
         train_config[key] = args[key]
 
     # Create models
-    model_config = args["model_config"]
+    model_config = config.MODEL_CONFIGS[args["model_config"]]
     device = args["device"]
     policy, value = create_policy(model_config).to(device), create_value(model_config).to(device)
 
@@ -79,7 +83,7 @@ if __name__ == "__main__":
     # MODEL EVALUATION
     else:
         # Create policy
-        model_config = args["model_config"]
+        model_config = config.MODEL_CONFIGS[args["model_config"]]
         device = args["device"]
         policy = create_policy(model_config).to(device)
 
