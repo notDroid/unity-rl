@@ -1,6 +1,7 @@
 import numpy as np
 from torchrl.envs.libs import UnityMLAgentsEnv
 from torchrl.envs import TransformedEnv, Stack, ExcludeTransform
+from config import ENV_PATH
 
 
 ### The Primitive Unity Environment
@@ -12,7 +13,7 @@ def create_unity_env(graphics=False):
     #     pass
 
     env = TransformedEnv(UnityMLAgentsEnv(
-        file_name="../../../envs/3DBall", worker_id=np.random.randint(10000), no_graphics=(not graphics),
+        file_name=ENV_PATH, worker_id=np.random.randint(10000), no_graphics=(not graphics),
     ))
 
     return env

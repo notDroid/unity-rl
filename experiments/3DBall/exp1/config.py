@@ -8,6 +8,8 @@ Still need to set params yourself (run/computer dependent):
 
 ### ENV INFO
 
+ENV_PATH = "../../../envs/3DBall"
+
 OBSERVATION_KEY = "VectorSensor_size8"
 ACTION_KEY = "continuous_action"
 
