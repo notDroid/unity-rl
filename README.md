@@ -2,7 +2,7 @@
 This repo contains examples of solving reinforcement learning scenarios from unity with torchRL. 
 It contains environments from the unity [mlagents](https://github.com/Unity-Technologies/ml-agents) repo.
 
-The projects in this repo are under rl/ and organized as: environment/experiment/. 
+The projects in this repo are under experiments/ and organized as: [environment]/[experiment]/. 
 Each experiment folder is self contained (a full project on its own). 
 
 ## **Usage**
