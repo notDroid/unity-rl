@@ -9,8 +9,6 @@ import config
 
 # Plot dataframe
 def plot(name):
-    name
-
     # Get dataframe
     logger = Logger(keys = config.LOG_KEYS, log_path=config.LOG_PATH, name=name)
     df = logger.dataframe()

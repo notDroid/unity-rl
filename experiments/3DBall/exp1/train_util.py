@@ -44,7 +44,11 @@ def make_loss_module(policy, value, epsilon, entropy_coef, gamma, lmbda):
     return loss_module
 
 # Uses loss module output tensordict and converts into a python dict with metrics
-def loss_dict(loss_data, weight, keys, values):
+def loss_dict(loss_data, weight):
+    # Hard coded keys, values
+    keys = ["value_loss", "explained_variance", "policy_loss", "kl_approx", "clip_fraction", "ESS"]
+    values = ["loss_critic", "explained_variance", "loss_objective", "kl_approx", "clip_fraction", "ESS"]
+
     return {
         key: (loss_data[value].detach().mean().item(), weight) for key, value in zip(keys, values)
     }
