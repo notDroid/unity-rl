@@ -1,0 +1,52 @@
+import numpy as np
+from torchrl.envs.libs import UnityMLAgentsEnv
+from torchrl.envs import TransformedEnv, Stack, ExcludeTransform
+
+
+### The Primitive Unity Environment
+
+def create_unity_env(graphics=False):
+    # try:
+    #     env.close()
+    # except:
+    #     pass
+
+    env = TransformedEnv(UnityMLAgentsEnv(
+        file_name="../../../envs/3DBall", worker_id=np.random.randint(10000), no_graphics=(not graphics),
+    ))
+
+    return env
+
+# Batch agent keys into a shared agent dimension
+def batch_agents(env, out_key="agents"):
+    agent_root_key = env.observation_keys[0][0]
+    agents = list(env.action_spec[agent_root_key].keys())
+    
+    # Create transform
+    stack = Stack(
+        in_keys=[(agent_root_key, agent) for agent in agents], 
+        out_key=(out_key,), 
+        in_key_inv=(out_key,), 
+        out_keys_inv=[(agent_root_key, agent) for agent in agents]
+    )
+
+    env.append_transform(stack)
+    return env
+
+
+### Minimum Usable Version of Unity Environment
+
+def create_base_env(graphics=False):
+    env = create_unity_env(graphics)
+    env = batch_agents(env)
+    return env
+
+
+### Practical Version of Unity Environment (For training and inference)
+
+def create_env(graphics=False):
+    env = create_base_env(graphics)
+    env.append_transform(
+        ExcludeTransform(("agents", "group_reward"))
+    )
+    return env
