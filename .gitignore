@@ -4,8 +4,10 @@
 
 # Checkpoints
 *.ckpt
+*.pt
 
 # Ignore Unity build outputs
+envs/
 *.app
 *.exe
 *.apk
