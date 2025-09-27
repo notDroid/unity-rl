@@ -70,6 +70,9 @@ DEFAULT_TRAIN_CONFIG = {
     "ckpt_path": CKPT_PATH,
     "log_path": LOG_PATH,
     "model_path": MODEL_PATH,
+
+    # Env Params
+    "time_scale": 20,
 }
 
 TRAIN_CONFIGS = {"default_train_config": DEFAULT_TRAIN_CONFIG}

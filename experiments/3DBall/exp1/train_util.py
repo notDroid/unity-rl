@@ -61,19 +61,18 @@ def compute_trajectory_metrics(tensordict_data):
     traj_data = split_trajectories(tensordict_data)
 
     reward = traj_data["next", "agents", "reward"] # [Tr, T, A, 1]
-    # [Tr, T]
     if "collector" in traj_data:
-        mask = traj_data["collector", "mask"].to(reward.dtype) 
+        mask = traj_data["collector", "mask"].to(reward.dtype) # [Tr, T]
     elif "mask" in traj_data:
-        mask = traj_data["mask"].to(reward.dtype)
+        mask = traj_data["mask"].to(reward.dtype) # [Tr, T]
     else:
         raise KeyError("No mask field found in:", tensordict_data)
 
     # 1. [Tr, T, A, 1] --(per episode return)--> [Tr, A] --(average return)--> float
-    average_return = (reward * (mask.unsqueeze(-1).unsqueeze(-1))).sum(dim=(1,3)).mean().item()
+    average_return = (reward * (mask.unsqueeze(-1).unsqueeze(-1))).sum(dim=(-3,-1)).mean().cpu().item()
 
     # 2. [Tr, T] --(episode length per trajectory (minumum of all agents))--> [Tr] --(average episode length)
-    average_episode_length = mask.sum(dim=1).mean().item()
+    average_episode_length = mask.sum(dim=1).mean().cpu().item()
     
     # 3. Calculate entropy from dist, instead of sampled log_p, more accurate approximation
     loc, scale = traj_data["agents", "loc"], traj_data["agents", "scale"].clamp_min(1e-6) # clamp avoids nans in log(scale)
@@ -85,10 +84,10 @@ def compute_trajectory_metrics(tensordict_data):
     # [Tr, T, A] --(mean entropy per agent (along the same timestep))--> [Tr, T]
     entropy = entropy.mean(dim=-1)
     # Total timesteps = mask.sum(), [Tr, T] --(average entropy)--> float
-    entropy = (entropy.sum() / mask.sum()).item()
+    entropy = (entropy.sum() / mask.sum()).cpu().item()
 
     # 4. action_std [T, A, action_dim]
-    action_std = tensordict_data["agents", config.ACTION_KEY].std().item()
+    action_std = tensordict_data["agents", config.ACTION_KEY].std().cpu().item()
 
     metrics = {
         "return": average_return,
@@ -220,6 +219,17 @@ def save_model(path, name, policy, value):
 ##
 #
 
+class WEWMA:
+    def __init__(self, beta):
+        self.N = 0.0
+        self.D = 0.0
+        self.beta = beta
+
+    def update(self, w, x):
+        self.N = w*x + self.beta * self.N
+        self.D =  w  + self.beta * self.D
+        return self.N / self.D
+
 class Logger:
     '''
     Simple CSV Logger
@@ -228,6 +238,7 @@ class Logger:
         - keys
         - log_path, name 
             - (optional) log_path is the log directory and must exist beforehand.
+        - beta (for ewmas)
 
     Usage:
 
@@ -244,17 +255,22 @@ class Logger:
     Log Ops:
         logger.add({key: value}): sets column
         logger.sum({key: value}): adds from previous column
-        logger.accumulate({key: value}): (weighted) average of calls (this row only, does not weight over previous rows)
+        logger.accumulate({key: value}): (weighted) EWMA of calls (this row only, does not weight over previous rows)
             - in accumulate providing a value tuple of (value, weight) uses that weight, otherwise no tuple means weight=1
     '''
 
-    def __init__(self, keys, log_path=None, name=None):
+    def __init__(self, keys, log_path=None, name=None, beta=0.90):
+        # Data State
         self.keys = list(keys)
         self.set_keys = set(keys)
         self.df = pd.DataFrame(columns=self.keys)
+
+        # For Building
         self.prev_row = {} # Helps with sums
         self.row = {}
-        self.weights = {} # Helps with accumulation (potentially weighted)
+        self.wewmas = {}
+        self.beta = beta
+        
 
         # Check for log path + name
         self.log_path = log_path
@@ -262,16 +278,25 @@ class Logger:
             raise KeyError("Log path provided without name")
         self.full_log_path = None
 
+        # Check for existing logs
         if log_path:
             self.full_log_path = os.path.join(log_path, f"{name}.csv")
 
-            # If it exists already, read current data
+            # If it exists, read current data
             if os.path.exists(self.full_log_path):
                 try:
                     self.df = pd.read_csv(self.full_log_path)
                     self._set_prev_row()
                 except:
                     print("FAILED TO READ LOG FILE, STARTING FROM SCRATCH.")
+
+    ### START ###
+
+    def _set_prev_row(self):
+        if len(self.df) == 0: 
+            self.prev_row = {}
+            return
+        self.prev_row = self.df.iloc[-1].to_dict()
 
     def reset(self):
         # Ignore if no path
@@ -285,13 +310,9 @@ class Logger:
         self.df = pd.DataFrame(columns=self.keys)
         self._set_prev_row()
 
-    def _set_prev_row(self):
-        if len(self.df) == 0: 
-            self.prev_row = {}
-            return
-        self.prev_row = self.df.iloc[-1].to_dict()
+    ### INTERNAL HELPERS ###
 
-    def check(self, key):
+    def _check(self, key):
         if key not in self.set_keys:
             print(f"key: {key} not in keys: {self.keys}. SKIPPING KEY")
             return False
@@ -301,50 +322,67 @@ class Logger:
     def _add(dict_to, dict_from, key, value):
         dict_to[key] = (value + dict_from[key]) if key in dict_from else value
 
+    def _update_wewma(self, key, w, x):
+        if key not in self.wewmas: 
+            self.wewmas[key] = WEWMA(self.beta)
+
+        self.row[key] = self.wewmas[key].update(w, x)
+
+    ### LOG OPS ###
+
     def sum(self, entries):
         for key, value in entries.items():
-            if not self.check(key): continue
-            self._add(self.row, self.prev_row, key, value)
+            if not self._check(key): continue
+            
+            if key in self.row: 
+                # Add to current row
+                self.row[key] += value
+            else:
+                # Add from prev row (no entry in current row)
+                self._add(self.row, self.prev_row, key, value)
 
 
     def accumulate(self, entries):
         for key, value_data in entries.items():
-            if not self.check(key): continue
+            if not self._check(key): continue
             
-            weight = value_data[1] if isinstance(value_data, tuple) else 1
-            self._add(self.weights, self.weights, key, weight)
-
-            value = value_data[0] if isinstance(value_data, tuple) else value_data
-            self._add(self.row, self.row, key, value*weight)
+            value, weight = value_data if isinstance(value_data, tuple) else (value_data, 1)
+            self._update_wewma(key, weight, value)
 
     def add(self, entries):
         for key, value in entries.items():
-            if not self.check(key): continue
+            if not self._check(key): continue
             self.row[key] = value
 
-    def next(self, print_row=False):
-        # Finish accumulate
-        for key, weight in self.weights.items():
-            self.row[key] = self.row[key] / weight
-        self.weights = {}
+    ### NEXT ###
 
-        # Combine and print
+    def next(self, print_row=False):
+        # Append next row
         df_next_row = pd.DataFrame(self.row, columns=self.keys, index=[len(self.df)])
-        if print_row:
-            print(df_next_row)
 
         if len(self.df) == 0:
             self.df = df_next_row
         else:
             self.df = pd.concat((self.df, df_next_row))
-        # Reset prev row and current row
+        
+        # Reset state
         self.prev_row = self.row
         self.row = {}
+        self.wewmas = {}
+
+        # Print
+        if print_row:
+            print(df_next_row)
 
         # Write to csv
         if self.full_log_path:
             df_next_row.to_csv(self.full_log_path, mode='a', header=(len(self.df) == 1), index=False)
 
+    ### ACCESS LOGS ###
+
     def dataframe(self):
         return self.df
+    
+    def last(self):
+        return self.row
     

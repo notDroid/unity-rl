@@ -53,7 +53,10 @@ def start_train(args):
     device = args["device"]
     policy, value = create_policy(model_config).to(device), create_value(model_config).to(device)
 
-    train(create_env, policy, value, train_config, continue_training=args["continue_training"])
+    # Apply env config
+    env_fn = lambda: create_env(time_scale=train_config["time_scale"])
+
+    train(env_fn, policy, value, train_config, continue_training=args["continue_training"])
 
 if __name__ == "__main__":
     args = parse_args()
@@ -74,6 +77,11 @@ if __name__ == "__main__":
     args["log_index"] = config.LOG_INDEX
     args["best_metric_key"] = config.BEST_METRIC_KEY
     
+    # Apply environment config
+    if args["time_scale"] is not None: 
+        env_fn = lambda graphics=False, **kwargs: create_env(graphics=graphics, time_scale=args["time_scale"], **kwargs)
+    else:
+        env_fn = create_env
 
     # 1. train
     method = args["method"]
@@ -94,7 +102,7 @@ if __name__ == "__main__":
 
         # 3. play
         if method == "play":
-            play(lambda: create_env(graphics=True), policy, timestamps=args["test_timestamps"])
+            play(lambda: env_fn(graphics=True), policy, timestamps=args["test_timestamps"])
         # 4. test
         elif method == "test":
-            test(create_env, policy, timestamps=args["test_timestamps"], workers=args["workers"])
+            test(env_fn, policy, timestamps=args["test_timestamps"], workers=args["workers"])

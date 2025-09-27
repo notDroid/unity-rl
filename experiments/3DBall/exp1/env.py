@@ -1,5 +1,6 @@
 import numpy as np
 from torchrl.envs.libs import UnityMLAgentsEnv
+from mlagents_envs.side_channel.engine_configuration_channel import EngineConfigurationChannel
 from torchrl.envs import TransformedEnv, Stack, ExcludeTransform
 from config import ENV_PATH
 
@@ -7,13 +8,10 @@ from config import ENV_PATH
 ### The Primitive Unity Environment
 
 def create_unity_env(graphics=False, **kwargs):
-    # try:
-    #     env.close()
-    # except:
-    #     pass
-
     env = TransformedEnv(UnityMLAgentsEnv(
-        file_name=ENV_PATH, worker_id=np.random.randint(10000), no_graphics=(not graphics), **kwargs
+        file_name=ENV_PATH, worker_id=np.random.randint(10000), no_graphics=(not graphics), 
+        device="cpu",
+        **kwargs,
     ))
 
     return env
@@ -45,8 +43,16 @@ def create_base_env(graphics=False, **kwargs):
 
 ### Practical Version of Unity Environment (For training and inference)
 
-def create_env(graphics=False, **kwargs):
-    env = create_base_env(graphics, **kwargs)
+def create_env(graphics=False, time_scale=1, **kwargs):
+    # Time scale
+    if time_scale != 1:
+        engine_config_channel = EngineConfigurationChannel()
+        env = create_base_env(graphics, **kwargs, side_channels=[engine_config_channel])
+        engine_config_channel.set_configuration_parameters(time_scale=time_scale)
+    else:
+        env = create_base_env(graphics, **kwargs)
+
+    # Exclude group reward
     env.append_transform(
         ExcludeTransform(("agents", "group_reward"))
     )

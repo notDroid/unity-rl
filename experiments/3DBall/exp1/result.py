@@ -29,7 +29,7 @@ def play(create_env, policy, timestamps):
     env = create_env()
 
     with torch.no_grad():
-        tensordict_data = env.rollout(timestamps, policy=policy)
+        tensordict_data = env.rollout(timestamps, policy=policy, auto_cast_to_device=True).to(policy.device)
         env.close()
         metrics = compute_single_trajectory_metrics(tensordict_data)
     
@@ -44,14 +44,15 @@ def test(create_env, policy, timestamps, workers=1):
             [create_env]*workers, policy, 
             frames_per_batch=timestamps, 
             total_frames=timestamps, 
-            device=device, storing_device=device, update_at_each_batch=True
+            env_device="cpu", device=device, storing_device=device, 
+            update_at_each_batch=True
         )
     else:
         collector = SyncDataCollector(
             create_env, policy, 
             frames_per_batch=timestamps, 
             total_frames=timestamps, 
-            device=device, storing_device=device,
+            env_device="cpu", device=device, storing_device=device,
         )
 
     data = None

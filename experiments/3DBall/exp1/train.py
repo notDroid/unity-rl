@@ -102,14 +102,15 @@ def train(create_env, policy, value, train_config, continue_training=True):
             [create_env]*workers, policy, 
             frames_per_batch=generation_size, 
             total_frames=timestamps - start_generation*generation_size, 
-            device=device, storing_device=storage_device, update_at_each_batch=True
+            env_device="cpu", device=device, storing_device=storage_device, 
+            update_at_each_batch=True
         )
     else:
         collector = SyncDataCollector(
             create_env, policy, 
             frames_per_batch=generation_size, 
             total_frames=timestamps - generation_size*start_generation, 
-            device=device, storing_device=storage_device,
+            env_device="cpu", device=device, storing_device=storage_device,
         )
     replay_buffer = ReplayBuffer(
         storage=LazyTensorStorage(generation_size, device=storage_device), 
