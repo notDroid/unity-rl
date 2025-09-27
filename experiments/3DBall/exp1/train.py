@@ -139,7 +139,7 @@ def train(create_env, policy, value, train_config, continue_training=True):
         # 2. Minibatch Gradient Descent Loop
         short_watch.start()
         policy.train(); value.train()
-        replay_buffer.empty(); replay_buffer.extend(tensordict_data)
+        replay_buffer.empty(); replay_buffer.extend(tensordict_data.reshape(-1))
         for epoch in range(epochs):
             for j, batch in enumerate(replay_buffer):
                 # 2.1 Optimization Step

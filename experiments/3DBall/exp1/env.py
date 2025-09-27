@@ -6,14 +6,14 @@ from config import ENV_PATH
 
 ### The Primitive Unity Environment
 
-def create_unity_env(graphics=False):
+def create_unity_env(graphics=False, **kwargs):
     # try:
     #     env.close()
     # except:
     #     pass
 
     env = TransformedEnv(UnityMLAgentsEnv(
-        file_name=ENV_PATH, worker_id=np.random.randint(10000), no_graphics=(not graphics),
+        file_name=ENV_PATH, worker_id=np.random.randint(10000), no_graphics=(not graphics), **kwargs
     ))
 
     return env
@@ -37,16 +37,16 @@ def batch_agents(env, out_key="agents"):
 
 ### Minimum Usable Version of Unity Environment
 
-def create_base_env(graphics=False):
-    env = create_unity_env(graphics)
+def create_base_env(graphics=False, **kwargs):
+    env = create_unity_env(graphics, **kwargs)
     env = batch_agents(env)
     return env
 
 
 ### Practical Version of Unity Environment (For training and inference)
 
-def create_env(graphics=False):
-    env = create_base_env(graphics)
+def create_env(graphics=False, **kwargs):
+    env = create_base_env(graphics, **kwargs)
     env.append_transform(
         ExcludeTransform(("agents", "group_reward"))
     )
