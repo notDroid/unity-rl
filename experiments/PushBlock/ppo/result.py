@@ -25,7 +25,7 @@ def play(create_env, policy, timestamps):
     env = create_env()
 
     with torch.no_grad():
-        tensordict_data = env.rollout(timestamps, policy=policy, auto_cast_to_device=True).to(policy.device)
+        tensordict_data = env.rollout(timestamps, policy=policy, auto_cast_to_device=True, break_when_any_done=False).to(policy.device)
         env.close()
         metrics = compute_single_trajectory_metrics(tensordict_data)
     
