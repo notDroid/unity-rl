@@ -6,7 +6,8 @@ import pandas as pd
 import torch
 from torchrl.objectives import ClipPPOLoss, ValueEstimators
 from torchrl.collectors.utils import split_trajectories
-from torch.distributions import Normal, Independent
+from torch.distributions import Independent
+from torchrl.modules import TanhNormal
 
 import config
 
@@ -74,13 +75,9 @@ def compute_trajectory_metrics(tensordict_data):
     # 2. [Tr, T] --(episode length per trajectory (minumum of all agents))--> [Tr] --(average episode length)
     average_episode_length = mask.sum(dim=1).mean().cpu().item()
     
-    # 3. Calculate entropy from dist, instead of sampled log_p, more accurate approximation
-    loc, scale = traj_data["agents", "loc"], traj_data["agents", "scale"].clamp_min(1e-6) # clamp avoids nans in log(scale)
-    loc, scale = loc.reshape(-1, loc.shape[-1]), scale.reshape(-1, scale.shape[-1]) # [Tr, T, A, action_dim]
-    # Multivariate Normal [B, action_dim]
-    dist = Independent(Normal(loc, scale), 1) 
+    # 3. Calculate entropy from sampled log_p since TanhNormal no closed form.
     # Masked entropy [Tr, T, A]
-    entropy = dist.entropy().reshape(*mask.shape, -1) * mask.unsqueeze(-1)
+    entropy = (-traj_data["agents", "log_prob"]).reshape(*mask.shape, -1) * mask.unsqueeze(-1)
     # [Tr, T, A] --(mean entropy per agent (along the same timestep))--> [Tr, T]
     entropy = entropy.mean(dim=-1)
     # Total timesteps = mask.sum(), [Tr, T] --(average entropy)--> float
