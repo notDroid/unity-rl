@@ -27,15 +27,15 @@ BEST_METRIC_KEY = "return"
 OBSERVATION_SHAPE = 210
 ACTION_SHAPE = 7
 
-DEFAULT_MODEL_CONFIG = {
-    "hidden_dim": 256,
-    "n_blocks": 3,
-    "in_features": OBSERVATION_SHAPE,
-    "out_features": ACTION_SHAPE,
-}
+# DEFAULT_MODEL_CONFIG = {
+#     "hidden_dim": 256,
+#     "n_blocks": 3,
+#     "in_features": OBSERVATION_SHAPE,
+#     "out_features": ACTION_SHAPE,
+# }
 
-MODEL_CONFIGS = {"default_model_config": DEFAULT_MODEL_CONFIG}
-MODEL_CONFIG_LIST = list(MODEL_CONFIGS.keys())
+# MODEL_CONFIGS = {"default_model_config": DEFAULT_MODEL_CONFIG}
+# MODEL_CONFIG_LIST = list(MODEL_CONFIGS.keys())
 
 ### TRAIN CONFIGS
 
@@ -44,35 +44,35 @@ LOG_PATH = 'logs'
 CKPT_PATH = 'ckpt'
 RESULTS_PATH = 'results'
 
-DEFAULT_TRAIN_CONFIG = {
-    # Train Params
-    "timestamps": 200_000,
-    "generation_size": 2000,
+# DEFAULT_TRAIN_CONFIG = {
+#     # Train Params
+#     "timestamps": 200_000,
+#     "generation_size": 2000,
 
-    # Inner Train Loop Params
-    "epochs": 10,
-    "minibatch_size": 64,
+#     # Inner Train Loop Params
+#     "epochs": 10,
+#     "minibatch_size": 64,
 
-    # PPO Params
-    "epsilon": 0.2,
-    "gamma": 0.99,
-    "gae_lambda": 0.95,
-    "entropy_coef": 1e-5,
+#     # PPO Params
+#     "epsilon": 0.2,
+#     "gamma": 0.99,
+#     "gae_lambda": 0.95,
+#     "entropy_coef": 1e-5,
 
-    # Optimizer Params
-    "lr": 3e-4,
-    "max_grad_norm": 0.5,
+#     # Optimizer Params
+#     "lr": 3e-4,
+#     "max_grad_norm": 0.5,
 
-    # Checkpoint and Log Params
-    "checkpoint_interval": 1,
-    "log_interval": 1,
-    "ckpt_path": CKPT_PATH,
-    "log_path": LOG_PATH,
-    "model_path": MODEL_PATH,
+#     # Checkpoint and Log Params
+#     "checkpoint_interval": 1,
+#     "log_interval": 1,
+#     "ckpt_path": CKPT_PATH,
+#     "log_path": LOG_PATH,
+#     "model_path": MODEL_PATH,
 
-    # Env Params
-    "time_scale": 20,
-}
+#     # Env Params
+#     "time_scale": 20,
+# }
 
-TRAIN_CONFIGS = {"default_train_config": DEFAULT_TRAIN_CONFIG}
-TRAIN_CONFIG_LIST = list(TRAIN_CONFIGS.keys())
+# TRAIN_CONFIGS = {"default_train_config": DEFAULT_TRAIN_CONFIG}
+# TRAIN_CONFIG_LIST = list(TRAIN_CONFIGS.keys())
