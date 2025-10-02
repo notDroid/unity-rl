@@ -16,7 +16,7 @@ def plot(name):
 
     # Plot it
     rows = (len(df.columns) + 3) // 4
-    df.plot(subplots=True, layout=(rows,4), figsize=(15, 7))
+    df.plot(subplots=True, layout=(rows,4), figsize=(15, int(rows* 7/3)))
     plt.tight_layout()
     plt.savefig(os.path.join(config.RESULTS_PATH, f"{name}.png"))
 

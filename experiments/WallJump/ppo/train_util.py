@@ -59,11 +59,10 @@ COMPUTES ENVIRONMENT METRICS:
 averages of: return, episode_length, entropy
 '''
 def compute_trajectory_metrics(tensordict_data):
-    traj_data = split_trajectories(tensordict_data)
+    traj_data = split_trajectories(tensordict_data, done_key=(config.ROOT_KEY, "done"))
 
     # Reward
-    reward = traj_data["next", config.ROOT_KEY, "reward"] # [Tr, T, A, 1]
-    if len(reward.shape) == 3: reward = reward.unsqueeze(-1)
+    reward = traj_data["next", config.ROOT_KEY, "reward"] # [Tr, T, 1]
     # Mask
     if "collector" in traj_data:
         mask = traj_data["collector", "mask"].to(reward.dtype) # [Tr, T]
@@ -71,24 +70,23 @@ def compute_trajectory_metrics(tensordict_data):
         mask = traj_data["mask"].to(reward.dtype) # [Tr, T]
     else:
         raise KeyError("No mask field found in:", tensordict_data)
+    reward = reward.reshape(mask.shape)
 
-    # 1. [Tr, T, A, 1] --(per episode return)--> [Tr, A] --(average return)--> float
-    average_return = (reward * (mask.unsqueeze(-1).unsqueeze(-1))).sum(dim=(-3,-1)).mean().cpu().item()
+    # 1. [Tr, T, 1] --(per episode return)--> [Tr] --(average return)--> float
+    average_return = (reward * mask).sum(dim=-1).mean().cpu().item()
 
     # 2. [Tr, T] --(episode length per trajectory (minumum of all agents))--> [Tr] --(average episode length)
-    average_episode_length = mask.sum(dim=1).mean().cpu().item()
+    average_episode_length = mask.sum(dim=-1).mean().cpu().item()
     
     # 3. Calculate entropy from categorical probability dist
     logits = traj_data[config.ROOT_KEY, "logits"]
-    logits = logits.reshape(-1, logits.shape[-1]) # [Tr, T, A, action_dim] -> [Tr*T*A, action_dim]
-    # Categorical [B, action_dim]
-    dist = Categorical(logits=logits)
-    # Masked entropy [Tr, T, A]
-    entropy = dist.entropy().reshape(*mask.shape, -1) * mask.unsqueeze(-1)
-    # [Tr, T, A] --(mean entropy per agent (along the same timestep))--> [Tr, T]
-    entropy = entropy.mean(dim=-1)
-    # Total timesteps = mask.sum(), [Tr, T] --(average entropy)--> float
-    entropy = (entropy.sum() / mask.sum()).cpu().item()
+    logits = logits.reshape(-1, logits.shape[-1]) # [Tr, T, action_dim] -> [B, action_dim]
+    # Categorical [B, action_dim] --(Entropy + Reshape)--> [Tr, T]
+    entropy = Categorical(logits=logits).entropy().reshape(mask.shape)
+    # Masked entropy [Tr, T] --(mean entropy per traj)--> [Tr]
+    entropy = ((entropy * mask).sum(dim=-1)) / (mask.sum(dim=-1))
+    # [Tr] --(mean entropy)--> float
+    entropy = entropy.mean().cpu().item()
 
     metrics = {
         "return": average_return,
@@ -99,7 +97,6 @@ def compute_trajectory_metrics(tensordict_data):
     return metrics
 
 def compute_single_trajectory_metrics(tensordict_data):
-    tensordict_data["next", "done"] = tensordict_data["next", config.ROOT_KEY, "done"].squeeze().any(-1)
     return compute_trajectory_metrics(tensordict_data)
 
 class Stopwatch:
@@ -203,7 +200,7 @@ def load_model(path, name, policy, value):
     path = os.path.join(path, f"{name}.pt")
     if not os.path.exists(path):
         raise KeyError(f"Path does not exist: {path}")
-    model_states = torch.load(path, weights_only=True)
+    model_states = torch.load(path, weights_only=True, map_location=policy.device)
     if policy:
         policy.load_state_dict(model_states["policy_state_dict"])
     if value:

@@ -12,7 +12,10 @@ ENV_PATH = "../../../envs/WallJump"
 
 ROOT_KEY = "agents"
 OBSERVATION_KEY = "observation"
-ACTION_KEY = "discrete_action"
+ACTION_KEY = "action"
+REWARD_KEY = "reward"
+DONE_KEY = "done"
+TERMINATION_KEY = "terminated"
 
 LOG_KEYS = [
     "timestep", "generation", "time", "collection_time", "train_time",  # Training Progress Metrics

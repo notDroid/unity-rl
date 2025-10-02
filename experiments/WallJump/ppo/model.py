@@ -2,7 +2,7 @@ import config
 from model_util import MLP
 from tensordict.nn import TensorDictModule
 from torchrl.modules import ProbabilisticActor
-from torch.distributions import OneHotCategorical
+from torch.distributions import Categorical
 
 import config
 
@@ -13,7 +13,7 @@ def create_policy(model_config):
     logits_model = TensorDictModule(model, in_keys=[(config.ROOT_KEY, config.OBSERVATION_KEY)], out_keys=[(config.ROOT_KEY, "logits")])
     policy = ProbabilisticActor(
         module=logits_model,  
-        distribution_class=OneHotCategorical,
+        distribution_class=Categorical,
 
         in_keys=[(config.ROOT_KEY, "logits")],
         out_keys=[(config.ROOT_KEY, config.ACTION_KEY)],
