@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
-from train_util import Logger, compute_trajectory_metrics, compute_single_trajectory_metrics
+from train_util import Logger, compute_trajectory_metrics
 
 import torch
 from torchrl.collectors import SyncDataCollector, MultiSyncDataCollector
@@ -27,7 +27,7 @@ def play(create_env, policy, timestamps):
     with torch.no_grad():
         tensordict_data = env.rollout(timestamps, policy=policy, auto_cast_to_device=True, break_when_any_done=False).to(policy.device)
         env.close()
-        metrics = compute_single_trajectory_metrics(tensordict_data)
+        metrics = compute_trajectory_metrics(tensordict_data, done_key=(config.ROOT_KEY, config.DONE_KEY))
     
     return metrics
 

@@ -11,6 +11,17 @@ from torch.distributions import Categorical
 
 import config
 
+from torchrl.envs.transforms import Transform
+from tensordict import TensorDict
+
+class PrintTransform(Transform):
+    def _call(self, tensordict: TensorDict) -> TensorDict:
+        print(tensordict)
+        return tensordict
+    
+def flatten(td): return td.reshape(-1)
+
+
 #
 ##
 #### LOSS FUNCTION UTILS (Specific to this project, see train.py for explanation)
@@ -23,7 +34,7 @@ def make_loss_module(policy, value, epsilon, entropy_coef, gamma, lmbda):
         critic_network=value,
         clip_epsilon=epsilon,
         entropy_coeff=entropy_coef,
-        # normalize_advantage=True,
+        normalize_advantage=True,
     )
     
     loss_module.set_keys(
@@ -34,9 +45,9 @@ def make_loss_module(policy, value, epsilon, entropy_coef, gamma, lmbda):
         advantage=(config.ROOT_KEY, "advantage"),
         value_target=(config.ROOT_KEY, "value_target"),
 
-        reward=(config.ROOT_KEY, "reward"),
-        done=(config.ROOT_KEY, "done"),
-        terminated=(config.ROOT_KEY, "terminated"),
+        reward=(config.ROOT_KEY, config.REWARD_KEY),
+        done=(config.ROOT_KEY, config.DONE_KEY),
+        terminated=(config.ROOT_KEY, config.TERMINATED_KEY),
         # truncated can be left out, PPO uses done/terminated for bootstrapping
     )
 
@@ -58,11 +69,11 @@ def loss_dict(loss_data, weight):
 COMPUTES ENVIRONMENT METRICS:
 averages of: return, episode_length, entropy
 '''
-def compute_trajectory_metrics(tensordict_data):
-    traj_data = split_trajectories(tensordict_data, done_key=(config.ROOT_KEY, "done"))
+def compute_trajectory_metrics(tensordict_data, done_key=None):
+    traj_data = split_trajectories(tensordict_data, done_key=done_key)
 
     # Reward
-    reward = traj_data["next", config.ROOT_KEY, "reward"] # [Tr, T, 1]
+    reward = traj_data["next", config.ROOT_KEY, config.REWARD_KEY] # [Tr, T, 1]
     # Mask
     if "collector" in traj_data:
         mask = traj_data["collector", "mask"].to(reward.dtype) # [Tr, T]
@@ -95,9 +106,6 @@ def compute_trajectory_metrics(tensordict_data):
     }
 
     return metrics
-
-def compute_single_trajectory_metrics(tensordict_data):
-    return compute_trajectory_metrics(tensordict_data)
 
 class Stopwatch:
     def __init__(self):
@@ -201,8 +209,7 @@ def load_model(path, name, policy, value):
     if not os.path.exists(path):
         raise KeyError(f"Path does not exist: {path}")
     model_states = torch.load(path, weights_only=True, map_location=policy.device)
-    if policy:
-        policy.load_state_dict(model_states["policy_state_dict"])
+    policy.load_state_dict(model_states["policy_state_dict"])
     if value:
         value.load_state_dict(model_states["value_state_dict"])
 
