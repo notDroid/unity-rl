@@ -7,9 +7,10 @@ import pandas as pd
 import torch
 from torchrl.objectives import ClipPPOLoss, ValueEstimators
 from torchrl.collectors.utils import split_trajectories
+from torchrl.envs.transforms.utils import _set_missing_tolerance
 from torch.distributions import Categorical
 
-import config
+# import config
 
 from torchrl.envs.transforms import Transform
 from tensordict import TensorDict
@@ -19,7 +20,16 @@ class PrintTransform(Transform):
         print(tensordict)
         return tensordict
     
-def flatten(td): return td.reshape(-1)
+    forward=_call
+
+    def _reset(self, tensordict, tensordict_reset):
+        with _set_missing_tolerance(self, True):
+            tensordict_reset = self._call(tensordict_reset)
+        return tensordict_reset
+    
+    def _inv_call(self, tensordict):
+        print(tensordict)
+        return tensordict
 
 
 #
@@ -38,17 +48,16 @@ def make_loss_module(policy, value, epsilon, entropy_coef, gamma, lmbda):
     )
     
     loss_module.set_keys(
-        action=(config.ROOT_KEY, config.ACTION_KEY),
-        sample_log_prob=(config.ROOT_KEY, "log_prob"),
-        value=(config.ROOT_KEY, "state_value"),
+        action="action",
+        sample_log_prob="log_prob",
+        value="state_value",
 
-        advantage=(config.ROOT_KEY, "advantage"),
-        value_target=(config.ROOT_KEY, "value_target"),
+        advantage="advantage",
+        value_target="value_target",
 
-        reward=(config.ROOT_KEY, config.REWARD_KEY),
-        done=(config.ROOT_KEY, config.DONE_KEY),
-        terminated=(config.ROOT_KEY, config.TERMINATED_KEY),
-        # truncated can be left out, PPO uses done/terminated for bootstrapping
+        reward="reward",
+        done="done",
+        terminated="terminated",
     )
 
     loss_module.make_value_estimator(ValueEstimators.GAE, gamma=gamma, lmbda=lmbda)
@@ -73,7 +82,7 @@ def compute_trajectory_metrics(tensordict_data, done_key=None):
     traj_data = split_trajectories(tensordict_data, done_key=done_key)
 
     # Reward
-    reward = traj_data["next", config.ROOT_KEY, config.REWARD_KEY] # [Tr, T, 1]
+    reward = traj_data["next", "reward"] # [Tr, T, 1]
     # Mask
     if "collector" in traj_data:
         mask = traj_data["collector", "mask"].to(reward.dtype) # [Tr, T]
@@ -90,7 +99,7 @@ def compute_trajectory_metrics(tensordict_data, done_key=None):
     average_episode_length = mask.sum(dim=-1).mean().cpu().item()
     
     # 3. Calculate entropy from categorical probability dist
-    logits = traj_data[config.ROOT_KEY, "logits"]
+    logits = traj_data["logits"]
     logits = logits.reshape(-1, logits.shape[-1]) # [Tr, T, action_dim] -> [B, action_dim]
     # Categorical [B, action_dim] --(Entropy + Reshape)--> [Tr, T]
     entropy = Categorical(logits=logits).entropy().reshape(mask.shape)
