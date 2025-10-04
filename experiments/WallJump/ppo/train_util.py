@@ -78,9 +78,7 @@ def loss_dict(loss_data, weight):
 COMPUTES ENVIRONMENT METRICS:
 averages of: return, episode_length, entropy
 '''
-def compute_trajectory_metrics(tensordict_data, done_key=None):
-    traj_data = split_trajectories(tensordict_data, done_key=done_key)
-
+def compute_trajectory_metrics(traj_data):
     # Reward
     reward = traj_data["next", "reward"] # [Tr, T, 1]
     # Mask
@@ -89,7 +87,7 @@ def compute_trajectory_metrics(tensordict_data, done_key=None):
     elif "mask" in traj_data:
         mask = traj_data["mask"].to(reward.dtype) # [Tr, T]
     else:
-        raise KeyError("No mask field found in:", tensordict_data)
+        raise KeyError("No mask field found in:", traj_data)
     reward = reward.reshape(mask.shape)
 
     # 1. [Tr, T, 1] --(per episode return)--> [Tr] --(average return)--> float
