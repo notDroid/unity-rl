@@ -60,7 +60,7 @@ def make_loss_module(policy, value, epsilon, entropy_coef, gamma, lmbda):
         terminated="terminated",
     )
 
-    loss_module.make_value_estimator(ValueEstimators.GAE, gamma=gamma, lmbda=lmbda)
+    loss_module.make_value_estimator(ValueEstimators.GAE, gamma=gamma, lmbda=lmbda, shifted=True)
 
     return loss_module
 
