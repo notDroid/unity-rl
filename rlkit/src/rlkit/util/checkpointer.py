@@ -1,3 +1,7 @@
+import os
+import tempfile
+import torch
+
 def atomic_torch_save(state_obj, path):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with tempfile.NamedTemporaryFile(delete=False, dir=os.path.dirname(path)) as tmp:
@@ -77,22 +81,4 @@ class Checkpointer:
         state_obj = {key: state_obj[key] for key in keys}
 
         atomic_torch_save(state_obj, os.path.join(model_path, f"{self.name}.pt"))
-
-def load_model(path, name, policy, value=None):
-    path = os.path.join(path, f"{name}.pt")
-    if not os.path.exists(path):
-        raise KeyError(f"Path does not exist: {path}")
-    
-    model_states = torch.load(path, weights_only=True, map_location=policy.device)
-    policy.load_state_dict(model_states["policy_state_dict"])
-    if value:
-        value.load_state_dict(model_states["value_state_dict"])
-
-def save_model(path, name, policy, value):
-    path = os.path.join(path, f"{name}.pt")
-    state_obj = {
-            "policy_state_dict": policy.state_dict(),
-            "value_state_dict": value.state_dict(),
-        }
-    atomic_torch_save(state_obj, path)
 

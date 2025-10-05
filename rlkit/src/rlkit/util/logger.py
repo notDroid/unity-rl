@@ -1,3 +1,6 @@
+import os
+import pandas as pd
+
 '''
 LOG PROGRESS UTIL
 '''

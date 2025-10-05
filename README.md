@@ -16,7 +16,7 @@ Create an env/ folder at the root of this repo and place compiled environments i
 
 ### **Python Environment**:
 
-First of all conda is required (something weird about grpcio) so make sure its properly setup.
+First of all conda is required (something weird about grpcio) so make sure its properly setup. Then run these at project root:
 
 ```
 # Create conda environment
@@ -28,7 +28,8 @@ conda install "grpcio=1.48.2" -c conda-forge
 python -m pip install mlagents==1.1.0
 python -m pip install numpy==2.2.6
 
-# Install rest
+# Install toolkit
 python -m pip install pandas matplotlib ipykernel
 python -m pip install torch torchrl 
+python -m pip install -e rldk
 ```
