@@ -20,10 +20,14 @@ class SoftResetWrapper(EnvBase):
             return self._last
         
         # Soft Reset: Unity Autoresets
-        return self._clear_done(self._last.copy())
+        return self._make_reset_out(self._last.copy())
     
-    def _clear_done(self, tensordict):
-        return tensordict.update(tensordict.select(*self.env.done_keys) * False)
+    def _make_reset_out(self, tensordict):
+        # 1. Clear Dones
+        tensordict = tensordict.update(tensordict.select(*self.env.done_keys) * False)
+        # 2. Exclude Rewards
+        tensordict = tensordict.exclude(*self.env.reward_keys, inplace=True)
+        return tensordict
     
     # Passthrough
     def _set_seed(self, *args, **kwargs): return self.env.set_seed(*args, **kwargs)
