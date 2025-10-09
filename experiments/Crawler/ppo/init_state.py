@@ -20,7 +20,7 @@ def init_state():
 
     # Logger + Checkpointer
     logger = Logger(keys = LOG_KEYS, log_path=LOG_PATH, name=NAME)
-    checkpointer = MultiVersionCheckpointer(ckpt_path=CKPT_PATH, name=NAME, metric_key=BEST_METRIC_KEY)
+    checkpointer = Checkpointer(ckpt_path=CKPT_PATH, name=NAME, metric_key=BEST_METRIC_KEY)
 
     # Continue/Reset
     start_generation = 0
@@ -43,6 +43,8 @@ def init_state():
             logger.reset()
 
     return {
+        "policy": policy,
+        "value": value,
         "optimizer": optimizer,
         "loss_module": loss_module,
         "checkpointer": checkpointer,
