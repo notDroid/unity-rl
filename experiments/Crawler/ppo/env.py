@@ -12,7 +12,9 @@ from config import ENV_PATH
 def _create_unity_env(graphics, **kwargs):
         from mlagents_envs import environment # Force load for multiproccessing
         env = UnityMLAgentsEnv(
-            file_name=ENV_PATH, worker_id=np.random.randint(10000), 
+            file_name=ENV_PATH, 
+            # registered_name="Crawler",
+            worker_id=np.random.randint(10000), 
             no_graphics=(not graphics), **kwargs,
             device="cpu",
         )

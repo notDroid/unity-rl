@@ -1,10 +1,13 @@
+# Import Torch
 from torch import nn
 
+# Models and Loss
 from rlkit.models import MLP
 from tensordict.nn import TensorDictModule
 from torchrl.modules import ProbabilisticActor, TanhNormal
 from tensordict.nn.distributions import NormalParamExtractor
 
+# Util
 from torchrl.objectives import ClipPPOLoss, ValueEstimators
 
 
@@ -42,14 +45,14 @@ def create_value(model_config):
     value = TensorDictModule(model, in_keys=["observation"], out_keys=["state_value"])
     return value
 
-
-def make_loss_module(policy, value, epsilon, entropy_coef, gamma, lmbda):
+def make_loss_module(policy, value, epsilon, entropy_coef, gamma, lmbda, value_coef=1):
     loss_module = ClipPPOLoss(
         actor_network=policy,
         critic_network=value,
         clip_epsilon=epsilon,
         loss_critic_type="smooth_l1", # Default
         entropy_coeff=entropy_coef,
+        value_coeff = value_coef,
         normalize_advantage=True,
     )
 

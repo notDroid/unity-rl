@@ -75,6 +75,7 @@ class Checkpointer:
         if not self.metric_key: return
         if self.metric_key not in state_obj: return
         metric = state_obj[self.metric_key]
+        if metric is None: return
         if metric >= self._get_best_metric():
             atomic_torch_save(state_obj, self.best_path)
 
@@ -120,7 +121,7 @@ class MultiVersionCheckpointer:
     checkpointer.revert(generation=1234) 
     ```
     '''
-    def __init__(self, ckpt_path, name, levels=1, base_interval=1, interval_scale=1, metric_key=None):
+    def __init__(self, ckpt_path, name, levels=0, base_interval=1, interval_scale=1, metric_key=None):
         self.path = ckpt_path
         self.name = name
         self.base_interval = base_interval
@@ -133,7 +134,7 @@ class MultiVersionCheckpointer:
         self.metric_key = metric_key
 
     def _intervals(self, generation):
-        '''Returns intervals in [closed, open) format from latest to largest oldest'''
+        '''Returns intervals in [closed, open) format from latest to oldest (descending in gen)'''
         levels = np.arange(self.levels)
         sizes = self.base_interval * np.pow(self.interval_scale, levels)
         sizes = np.insert(sizes, 0, 1)
@@ -141,6 +142,7 @@ class MultiVersionCheckpointer:
         intervals = generation - sizes.cumsum()
         intervals = intervals[intervals > 0]
         intervals = np.insert(intervals, len(intervals), 0)
+        # print("intervals:", intervals)
         return intervals
 
     def _gens(self):
@@ -150,12 +152,14 @@ class MultiVersionCheckpointer:
         for file_name in ls:
             # Only from our name
             if not file_name.startswith(self.name + '_'): continue
-            gen = file_name.split('_')[-1]
+            gen = file_name.split('_')[-1].split('.')[0]
 
             # Add only integer generations (so excluding best)
             if gen.isnumeric():
                 gens.append(int(gen))
-        return np.sort(gens)
+        gens = np.sort(gens)
+        # print("gens:", gens)
+        return gens
 
     def _latest(self):
         gens = self._gens()
@@ -166,30 +170,33 @@ class MultiVersionCheckpointer:
         '''Enforces 1 ckpt per interval condition, best is ignored'''
         
         gens = self._gens()
-        intervals = reversed(self._intervals(generation))
+        intervals = self._intervals(generation)
         i = len(intervals) - 1
         occupied = False
 
         for gen in gens:
             gen_path = self.path_fn(gen)
 
-            # CASE 1: above max generation -> delete
-            if gen > generation: os.remove(gen_path)
+            while True:
+                # CASE 1: above max generation -> delete
+                if gen > generation: 
+                    os.remove(gen_path)
+                    break
 
-            # CASE 2: within interval [start, end) (where start > end)
-            start, end = intervals[i-1], intervals[i]
-            if start <= gen and gen > end:
-                # CASE 1: oldest in interval -> keep
-                if not occupied: 
-                    occupied = True
-                    continue
-                # CASE 2: not oldest in interval -> delete
-                os.remove(gen_path)
-                continue
+                # CASE 2: within interval [start, end) (where start > end)
+                start, end = intervals[i-1], intervals[i]
+                if start >= gen and gen > end:
+                    # CASE 1: oldest in interval -> keep
+                    if not occupied: 
+                        occupied = True
+                        break
+                    # CASE 2: not oldest in interval -> delete
+                    os.remove(gen_path)
+                    break
 
-            # CASE 3: not within interval -> must be in a future interval
-            i -= 1
-            occupied = False
+                # CASE 3: not within interval -> must be in a future interval
+                i -= 1
+                occupied = False
 
     def _get_best_metric(self):
         if not os.path.exists(self.best_path):
@@ -251,6 +258,7 @@ class MultiVersionCheckpointer:
         if not self.metric_key: return
         if self.metric_key not in state_obj: return
         metric = state_obj[self.metric_key]
+        if metric is None: return
         if metric >= self._get_best_metric():
             atomic_torch_save(state_obj, self.best_path)
 

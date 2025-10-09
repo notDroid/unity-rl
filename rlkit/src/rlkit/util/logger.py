@@ -129,6 +129,10 @@ class Logger:
             print("FAILED TO READ LOG FILE, STARTING FROM SCRATCH.")
             self.reset()
             return
+        if len(self.df) == 0: 
+            print("NOTHING TO READ IN LOG FILE, STARTING FROM SCRATCH.")
+            self.reset()
+            return
 
         # Use latest
         if key is None:
@@ -136,7 +140,7 @@ class Logger:
             return
         
         # Revert to some specified (key, value) search dataframe backwards
-        index = np.where(self.df[key] == value)
+        index = np.where(self.df[key] == value)[0]
 
         # Not found
         if len(index) == 0: 
@@ -145,6 +149,7 @@ class Logger:
         # Save
         index = index[-1]
         self.df = self.df.iloc[:index + 1, :]
+        self._set_prev_row()
         atomic_replace_df(self.df, self.full_log_path)
 
     ### INTERNAL HELPERS ###
