@@ -1,7 +1,4 @@
-import os
-import torch
 import time
-from .checkpointer import atomic_torch_save
 
 class Stopwatch:
     def __init__(self):

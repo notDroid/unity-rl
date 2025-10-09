@@ -14,72 +14,87 @@ def atomic_torch_save(state_obj, path):
 
 class Checkpointer:
     '''
-    Checkpoints training progress. Uses atomic ops so no corruption of files occur.
+    Checkpoints training progress. 
+    Uses atomic ops so no corruption of files occur.
+    Saves latest and best checkpoints.
     
     Args:
         - ckpt_path, name
 
     Usage:
 
-    checkpointer = Checkpointer(ckpt_path=ckpt_path, name=name)
+    ```
+    checkpointer = Checkpointer(ckpt_path=ckpt_path, name=name, metric_key="metric")
     checkpointer.reset()
+    
     # training ...
-    checkpointer.save_progress(metric_key="metric",
-    state_obj={
-        "model_state_dict": model.state_dict(), "optimizer_state_dict": optimizer.state_dict(), "metric": metric
-    })
-    checkpoint = checkpointer.load_progress()
-    # this is a dict containing values of (generation, metric) and state dict of others
 
-    # save model, choose 'best' or 'latest, model_path is the directory, whats written is name.pt containing the keys specified from that state_obj.
-    checkpointer.copy_model(ckpt_type='best', model_path=model_path, keys=("model",))
+    checkpointer.save_progress(
+        state_obj={
+            "model_state_dict": model.state_dict(), "optimizer_state_dict": optimizer.state_dict(), "metric": metric
+        }
+    )
+
+
+    # Retrieve state object
+    checkpoint = checkpointer.load_progress(generation="latest", weights_only=True, map_location="cuda")
+
+    # copy to model directory
+    checkpointer.copy_model(model_path=model_path, generation="best", keys=("model_state_dict",))
+    ```
     '''
-    def __init__(self, ckpt_path, name):
+    def __init__(self, ckpt_path, name, metric_key = None):
         self.path = ckpt_path
         self.name = name
         self.best_path = os.path.join(ckpt_path, f"{name}_best.ckpt")
         self.latest_path = os.path.join(ckpt_path, f"{name}_latest.ckpt")
-        self.best_metric = self.get_best_metric()
+        self.metric_key = metric_key
+        self.best_metric = float("-inf")
 
     def reset(self):
-        if os.path.exists(self.best_path):
-            os.remove(self.best_path)
-        if os.path.exists(self.latest_path):
-            os.remove(self.latest_path)
+        ls = os.listdir(self.path)
+        for file_name in ls:
+            # Look for files with prefix
+            if not file_name.startswith(self.name + '_'): continue
+
+            # Delete
+            os.remove(os.path.join(self.path, file_name))
         self.best_metric = float("-inf")
         
-    def get_best_metric(self):
+    def _get_best_metric(self):
         if not os.path.exists(self.best_path):
             return float("-inf")
-        try:
-            checkpoint = torch.load(self.best_path, weights_only=True)
-            return checkpoint["metric"]
-        except:
-            return float("-inf")
+        checkpoint = torch.load(self.best_path, weights_only=False, map_location='meta')
+        return checkpoint[self.metric_key]
 
-    def save_progress(self, metric_key, state_obj):
+    def save_progress(self, state_obj):
+        # Add new latest
         atomic_torch_save(state_obj, self.latest_path)
 
         # Check if new best
-        metric = state_obj[metric_key]
-        if metric >= self.best_metric:
+        if not self.metric_key: return
+        if self.metric_key not in state_obj: return
+        metric = state_obj[self.metric_key]
+        if metric >= self._get_best_metric():
             atomic_torch_save(state_obj, self.best_path)
-            self.best_metric = metric
 
-    def load_progress(self):
-        if not os.path.exists(self.latest_path):
-            return None
-        return torch.load(self.latest_path, weights_only=True)
+    def load_progress(self, generation="latest", **kwargs):
+        if generation == "latest": path = self.latest_path
+        elif generation == "best": path = self.best_path
+        else: raise RuntimeError(f"Invalid ckpt type: {generation} not in (\"latest\", \"best\")")
 
-    def copy_model(self, ckpt_type, model_path, keys):
-        if ckpt_type == 'best':
-            state_obj = torch.load(self.best_path, weights_only=True)
-        elif ckpt_type == 'latest':
-            state_obj = torch.load(self.latest_path, weights_only=True)
-        else:
-            raise KeyError(f"Invalid ckpt_type: {ckpt_type}. Expected: best or latest")
+        if not os.path.exists(path): return None
+        return torch.load(path, **kwargs)
 
-        state_obj = {key: state_obj[key] for key in keys}
+    def copy_model(self, model_path, generation="latest", keys = None):
+        if generation == "latest": path = self.latest_path
+        elif generation == "best": path = self.best_path
+        else: raise RuntimeError(f"Invalid ckpt type: {generation} not in (\"latest\", \"best\")")
+
+        state_obj = torch.load(path, weights_only=False)
+
+        if keys is not None:
+            state_obj = {key: state_obj[key] for key in keys}
 
         atomic_torch_save(state_obj, os.path.join(model_path, f"{self.name}.pt"))
 
@@ -90,121 +105,171 @@ class MultiVersionCheckpointer:
     Keeps multiple past versions, optionally with a log scale.
     
     Args:
-        - ckpt_path, name
+        - ckpt_path, name, levels, base_interval, interval_scale
+            - levels is how many checkpoints to maintain (excluding best)
+            - base is size of base interval
+            - scale is how much larger the next interval is
+        
+    interval sizes = [1, B, B(s), B(s^2), ...]
+    intervals = ckpt_gen - [0, 1), [1, 1+B), [1+B, 1+B(1+s)), [1+B(1+s), 1+B(1+s+s^2)), ...
 
-    Usage:
+    Updated Usage (past what's detailed in Checkpointer above):
 
-    checkpointer = Checkpointer(ckpt_path=ckpt_path, name=name)
-    checkpointer.reset()
-    # training ...
-    checkpointer.save_progress(metric_key="metric",
-    state_obj={
-        "model_state_dict": model.state_dict(), "optimizer_state_dict": optimizer.state_dict(), "metric": metric
-    })
-    checkpoint = checkpointer.load_progress()
-    # this is a dict containing values of (generation, metric) and state dict of others
-
-    # save model, choose 'best' or 'latest, model_path is the directory, whats written is name.pt containing the keys specified from that state_obj.
-    checkpointer.copy_model(ckpt_type='best', model_path=model_path, keys=("model",))
+    ```
+    # Go back to version 1234 associated with ckpt_path/name_1234.ckpt
+    checkpointer.revert(generation=1234) 
+    ```
     '''
-    def __init__(self, ckpt_path, name, levels=1, base_interval=1, interval_scale=1):
+    def __init__(self, ckpt_path, name, levels=1, base_interval=1, interval_scale=1, metric_key=None):
         self.path = ckpt_path
         self.name = name
         self.base_interval = base_interval
         self.interval_scale = interval_scale
         self.levels = levels
 
-        self.path_fn = lambda x: os.path.join(self.path, f"{self.name}_{x}")
+        self.path_fn = lambda x: os.path.join(self.path, f"{self.name}_{x}.ckpt")
+        self.best_path = self.path_fn('best')
+        self.best_metric = float("-inf")
+        self.metric_key = metric_key
 
-        self.generation = 0
+    def _intervals(self, generation):
+        '''Returns intervals in [closed, open) format from latest to largest oldest'''
+        levels = np.arange(self.levels)
+        sizes = self.base_interval * np.pow(self.interval_scale, levels)
+        sizes = np.insert(sizes, 0, 1)
+        sizes = np.insert(sizes, 0, 0)
+        intervals = generation - sizes.cumsum()
+        intervals = intervals[intervals > 0]
+        intervals = np.insert(intervals, len(intervals), 0)
+        return intervals
 
     def _gens(self):
+        '''Gets list of generations from ckpt dir in ascending order'''
         ls = os.listdir(self.path)
         gens = []
         for file_name in ls:
-            if file_name.startswith(self.name + '_'):
-                gen = int(file_name.split('_')[-1])
-                gens.append(gen)
-        return sorted(gens)
+            # Only from our name
+            if not file_name.startswith(self.name + '_'): continue
+            gen = file_name.split('_')[-1]
 
-    def revert(self, generation='latest'):
+            # Add only integer generations (so excluding best)
+            if gen.isnumeric():
+                gens.append(int(gen))
+        return np.sort(gens)
+
+    def _latest(self):
+        gens = self._gens()
+        if len(gens) == 0: return 0 
+        return max(gens)
+
+    def _enforce(self, generation):
+        '''Enforces 1 ckpt per interval condition, best is ignored'''
+        
+        gens = self._gens()
+        intervals = reversed(self._intervals(generation))
+        i = len(intervals) - 1
+        occupied = False
+
+        for gen in gens:
+            gen_path = self.path_fn(gen)
+
+            # CASE 1: above max generation -> delete
+            if gen > generation: os.remove(gen_path)
+
+            # CASE 2: within interval [start, end) (where start > end)
+            start, end = intervals[i-1], intervals[i]
+            if start <= gen and gen > end:
+                # CASE 1: oldest in interval -> keep
+                if not occupied: 
+                    occupied = True
+                    continue
+                # CASE 2: not oldest in interval -> delete
+                os.remove(gen_path)
+                continue
+
+            # CASE 3: not within interval -> must be in a future interval
+            i -= 1
+            occupied = False
+
+    def _get_best_metric(self):
+        if not os.path.exists(self.best_path):
+            return float("-inf")
+        checkpoint = torch.load(self.best_path, weights_only=True, map_location='meta')
+        return checkpoint[self.metric_key]
+
+    def reset(self):
+        ls = os.listdir(self.path)
+        for file_name in ls:
+            # Look for files with prefix
+            if not file_name.startswith(self.name + '_'): continue
+
+            # Delete
+            os.remove(os.path.join(self.path, file_name))
+        self.best_metric = float("-inf")
+
+    def revert(self, generation="latest"):
+        '''
+        Deletes checkpoints past current one
+        '''
         path = self.path_fn(generation)
         
         # Check for existance
         if (generation != 'latest') and (not os.path.exists(path)): 
-            self.generation = 0
             print(f"No file found: {path}")
+            return
 
+        # Numeric or best
         if generation != 'latest':
-            # Retrieve checkpoint
+            # Retrieve checkpoint if best
             if generation == 'best':
-                checkpoint = torch.load(path, weights_only=True)
-                self.generation = checkpoint["checkpoint_generation"]
-            else:
-                self.generation = generation
+                checkpoint = torch.load(path, weights_only=True, map_location='meta')
+                generation = int(checkpoint["checkpoint_generation"])
             
-            # Delete generations past current one
-            gens = self._gens()
-            for gen in gens:
-                if gen <= self.generation: continue
-                os.remove(self.path_fn(gen))
-            return
+            # Enforce invariant
+            self._enforce(generation)
         
-        gens = self._gens()
-        if len(gens) == 0: 
-            self.generation = 0
+        # Choose latest
+        generation = self._latest()
+        if generation == 0: 
             print(f"No checkpoints, starting at 0")
+            self.reset() # Clears best if present
             return
         
-        self.generation = max(gens)
+        # Enforce invariant
+        self._enforce(generation)
         return
-        
-    def _interval_ends(self):
-        levels = np.arange(self.levels)
-        sizes = self.base_interval * np.pow(self.interval_scale, levels)
-        ends = self.generation - sizes
-        ends = ends[ends >= 0]
-        ends = np.insert(ends, 0, -1)
-        return ends
 
-    def save_progress(self, metric_key, state_obj):
-        self.generation += 1
-        
+    def save_progress(self, state_obj):
+        # Add new checkpoint
+        generation = self._latest() + 1
+        atomic_torch_save(state_obj, self.path_fn(generation))
 
-        # Shift and delete checkpoints
-        gens = self._gens()
-        ends = self._interval_ends()
-        i = 0
-        for end in ends:
-            if i >= len(gens): break
-            occupied = True
-            i += 1
-            if i >= len(gens): break
-            occupied = True
-
-
-
-        atomic_torch_save(state_obj, self.latest_path)
+        # Enforce invariant
+        self._enforce(generation)
 
         # Check if new best
-        metric = state_obj[metric_key]
-        if metric >= self.best_metric:
+        if not self.metric_key: return
+        if self.metric_key not in state_obj: return
+        metric = state_obj[self.metric_key]
+        if metric >= self._get_best_metric():
             atomic_torch_save(state_obj, self.best_path)
-            self.best_metric = metric
 
-    def load_progress(self):
-        if not os.path.exists(self.latest_path):
-            return None
-        return torch.load(self.latest_path, weights_only=True)
+    def load_progress(self, generation="latest", **kwargs):
+        if generation == "latest": path = self.path_fn(self._latest())
+        elif generation == "best": path = self.best_path
+        else: path = self.path_fn(generation)
 
-    def copy_model(self, ckpt_type, model_path, keys):
-        if ckpt_type == 'best':
-            state_obj = torch.load(self.best_path, weights_only=True)
-        elif ckpt_type == 'latest':
-            state_obj = torch.load(self.latest_path, weights_only=True)
-        else:
-            raise KeyError(f"Invalid ckpt_type: {ckpt_type}. Expected: best or latest")
+        if not os.path.exists(path): return None
+        return torch.load(path, **kwargs)
 
-        state_obj = {key: state_obj[key] for key in keys}
+    def copy_model(self, model_path, generation="latest", keys=None):
+        if generation == "latest": path = self.path_fn(self._latest())
+        elif generation == "best": path = self.best_path
+        else: path = self.path_fn(generation)
+
+        state_obj = torch.load(path, weights_only=True)
+
+        if keys is not None:
+            state_obj = {key: state_obj[key] for key in keys}
 
         atomic_torch_save(state_obj, os.path.join(model_path, f"{self.name}.pt"))

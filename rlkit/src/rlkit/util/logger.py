@@ -1,5 +1,15 @@
 import os
+import numpy as np
 import pandas as pd
+import tempfile
+
+def atomic_replace_df(df, path):
+    with tempfile.NamedTemporaryFile(delete=False, dir=os.path.dirname(path)) as tmp:
+        df.to_csv(tmp.name, mode='w', header=True, index=False)
+        tmp.flush()
+        os.fsync(tmp.fileno())
+        tmp_path = tmp.name
+    os.replace(tmp_path, path)
 
 '''
 LOG PROGRESS UTIL
@@ -33,26 +43,30 @@ class Logger:
     
     Args:
         - keys
-        - log_path, name 
-            - (optional) log_path is the log directory and must exist beforehand.
+        - (optional) log_path, name 
+            - log_path is the log directory and must exist beforehand.
         - beta (for ewmas)
 
     Usage:
 
+    ```
     logger = Logger(keys=keys, log_path=log_path, name=name) # (full_log_path = log_path/name.csv)
-    # the history is retrieved on creation of the logger
-    logger.reset() # reset the logger and log file if present
+    # Retrieve history with revert, you can also revert to a past state by specifying key, value
+    logger.revert()
+    # Reset logger
+    logger.reset()
+    
     # ...
     # Do some log ops
     # ...
     logger.next(print_row=True) # Writes this row, optionally prints it
-    # ...
     history_df = logger.dataframe()
 
     Log Ops:
         logger.add({key: value}): sets column (1 call), sums (1+ calls)
         logger.acc({key: value} or {key: (value, weight)}, mode='ema' or 'avg'):
             -  WEWMA or Weighted Average a key, if weight not given default to 1.
+    ```
     '''
 
     def __init__(self, keys, log_path=None, name=None, beta=0.95):
@@ -75,17 +89,8 @@ class Logger:
             raise KeyError("Log path provided without name")
         self.full_log_path = None
 
-        # Check for existing logs
         if log_path:
             self.full_log_path = os.path.join(log_path, f"{name}.csv")
-
-            # If it exists, read current data
-            if os.path.exists(self.full_log_path):
-                try:
-                    self.df = pd.read_csv(self.full_log_path)
-                    self._set_prev_row()
-                except:
-                    print("FAILED TO READ LOG FILE, STARTING FROM SCRATCH.")
 
     ### START ###
 
@@ -106,6 +111,40 @@ class Logger:
             pass
         self.df = pd.DataFrame(columns=self.keys)
         self._set_prev_row()
+
+    def revert(self, key=None, value=None):
+        if self.full_log_path is None: return
+
+        # Doesn't exist
+        if not os.path.exists(self.full_log_path):
+            print("FAILED TO READ LOG FILE, STARTING FROM SCRATCH.")
+            self.reset() 
+            return
+        
+        # Attempt to read file
+        try:
+            self.df = pd.read_csv(self.full_log_path)
+        except:
+            print("FAILED TO READ LOG FILE, STARTING FROM SCRATCH.")
+            self.reset()
+            return
+
+        # Use latest
+        if key is None:
+            self._set_prev_row()
+            return
+        
+        # Revert to some specified (key, value) search dataframe backwards
+        index = np.where(self.df[key] == value)
+
+        # Not found
+        if len(index) == 0: 
+            raise KeyError("(key, value) not found in dataframe")
+        
+        # Save
+        index = index[-1]
+        self.df = self.df.iloc[:index + 1, :]
+        atomic_replace_df(self.df, self.full_log_path)
 
     ### INTERNAL HELPERS ###
 
