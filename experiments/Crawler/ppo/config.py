@@ -18,3 +18,17 @@ MODEL_PATH = 'models'
 LOG_PATH = 'logs'
 CKPT_PATH = 'ckpt'
 RESULTS_PATH = 'results'
+
+
+### TRAIN PARAMS
+
+MODEL_CONFIG = {
+    "hidden_dim": 1024,
+    "n_blocks": 3,
+    "in_features": OBSERVATION_DIM,
+    "out_features": ACTION_DIM,
+}
+
+TRAIN_CONFIG = {
+    
+}

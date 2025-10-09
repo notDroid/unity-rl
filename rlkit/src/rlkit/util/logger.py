@@ -63,9 +63,9 @@ class Logger:
     history_df = logger.dataframe()
 
     Log Ops:
-        logger.add({key: value}): sets column (1 call), sums (1+ calls)
-        logger.acc({key: value} or {key: (value, weight)}, mode='ema' or 'avg'):
-            -  WEWMA or Weighted Average a key, if weight not given default to 1.
+        logger.add({key: value}): sums across previous rows
+        logger.acc({key: value} or {key: (value, weight)}, mode='ema' or 'avg' or 'sum'):
+            -  if weight not provided, defaults to 1
     ```
     '''
 
@@ -81,6 +81,7 @@ class Logger:
         self.wewmas = {}
         self.beta = beta
         self.wavgs = {}
+        self.sums = {}
         
 
         # Check for log path + name
@@ -170,16 +171,24 @@ class Logger:
 
         self.row[key] = self.wavgs[key].update(w, x)
 
+    def _update_sum(self, key, x):
+        if key not in self.sums: 
+            self.sums[key] = x
+        else:
+            self.sums[key] += x
+        self.row[key] = self.sums[key]
+
     ### LOG OPS ###
 
-    def acc(self, entries, mode='ema'):
+    def acc(self, entries, mode='sum'):
         for key, value_data in entries.items():
             if not self._check(key): continue
             
             value, weight = value_data if isinstance(value_data, tuple) else (value_data, 1)
             if mode == 'ema': self._update_wewma(key, weight, value)
             elif mode == 'avg': self._update_wavg(key, weight, value)
-
+            elif mode =='sum': self._update_sum(key, value)
+            else: raise KeyError(f"Expected a mode in (\"ema\", \"avg\", \"sum\") not {mode}")
 
     def add(self, entries):
         for key, value in entries.items():
@@ -202,6 +211,7 @@ class Logger:
         self.row = {}
         self.wewmas = {}
         self.wavgs = {}
+        self.sums = {}
 
         # Print
         if print_row:

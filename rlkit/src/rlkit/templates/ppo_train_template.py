@@ -8,9 +8,6 @@ from torchrl.collectors import SyncDataCollector, MultiSyncDataCollector
 from torchrl.data import LazyTensorStorage, ReplayBuffer
 from torchrl.data.replay_buffers.samplers import SamplerWithoutReplacement
 
-from simple_train_util import make_loss_module, loss_dict, compute_trajectory_metrics, Checkpointer, Logger, Stopwatch
-
-
 '''
 PPO Train Function
 
