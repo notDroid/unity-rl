@@ -52,16 +52,15 @@ def make_loss_module(policy, value, epsilon, entropy_coef, gamma, lmbda, value_c
         clip_epsilon=epsilon,
         loss_critic_type="smooth_l1", # Default
         entropy_coeff=entropy_coef,
-        value_coeff = value_coef,
-        normalize_advantage=True,
+        value_coeff=value_coef,
+        # normalize_advantage=True,
     )
 
     loss_module.make_value_estimator(
         ValueEstimators.GAE, 
         # time_dim=-1,
         gamma=gamma, lmbda=lmbda, 
-        shifted=True,
-        auto_reset_env=True,
+        shifted=True, average_gae=True,
     )
 
     # All defaults

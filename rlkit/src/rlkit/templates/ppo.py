@@ -25,7 +25,7 @@ def ppo_loss_td_to_dict(loss_data, weight):
         key: (loss_data[value].detach().mean().item(), weight) for key, value in zip(keys, values)
     }
 
-
+ADV_CLIP = 5
 
 class PPOTrainer:
     def __init__(self, create_env: callable, train_config: dict):
@@ -154,6 +154,7 @@ class PPOTrainer:
             with torch.no_grad():
                 self.loss_module.value_estimator(batch)
                 metrics = self.metric_module(batch)
+            batch["advantage"].clamp_(-ADV_CLIP, ADV_CLIP)
             
             if self.logger: self.logger.acc(metrics, mode='avg')
             self.train_replay_buffer.extend(batch.reshape(-1).cpu())

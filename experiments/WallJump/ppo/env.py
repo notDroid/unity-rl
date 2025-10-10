@@ -3,8 +3,8 @@ import numpy as np
 
 # Environment
 from torchrl.envs.libs import UnityMLAgentsEnv
-from torchrl.envs.transforms import ExcludeTransform, ObservationNorm, ClipTransform, RewardScaling
-from rlkit.transforms import append_batch_transform, InvertibleCatTensors, RenameAction, SoftResetWrapper
+from torchrl.envs.transforms import ExcludeTransform
+from rlkit.transforms import append_batch_transform, InvertibleCatTensors, RenameAction, SoftResetWrapper, FlattenMultiOneHot
 from mlagents_envs.side_channel.engine_configuration_channel import EngineConfigurationChannel
 
 from config import ENV_PATH
@@ -12,8 +12,8 @@ from config import ENV_PATH
 def _create_unity_env(graphics, **kwargs):
         from mlagents_envs import environment # Force load for multiproccessing
         env = UnityMLAgentsEnv(
-            file_name=ENV_PATH, 
-            # registered_name="Crawler",
+            # file_name=ENV_PATH, 
+            registered_name="WallJump",
             worker_id=np.random.randint(10000), 
             no_graphics=(not graphics), **kwargs,
             device="cpu",
@@ -39,10 +39,6 @@ def create_base_env(graphics=False, **kwargs):
     env = create_unity_env(graphics, **kwargs)
     env = append_batch_transform(env)
 
-    # Found constants by inspection of observation mean and std (from 2000 steps of random policy)
-    env = env.append_transform(
-        ObservationNorm(loc=1.5, scale=5.0, standard_normal=True, in_keys=["VectorSensor_size32"])
-    )
     env = env.append_transform(
         InvertibleCatTensors(in_keys=env.observation_keys, out_key="observation")
     )
@@ -53,10 +49,7 @@ def create_base_env(graphics=False, **kwargs):
         RenameAction(env.action_key, "action")
     )
     env = env.append_transform(
-        ClipTransform(in_keys=["observation"], low=-5.0, high=5.0)
-    )
-    env = env.append_transform(
-        RewardScaling(loc=0.0, scale=10.0, standard_normal=True),
+        FlattenMultiOneHot("action")
     )
     return env
 
