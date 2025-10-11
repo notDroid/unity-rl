@@ -31,5 +31,5 @@ python -m pip install numpy==2.2.6
 # Install toolkit
 python -m pip install pandas matplotlib ipykernel
 python -m pip install torch torchrl 
-python -m pip install -e rldk
+python -m pip install -e rlkit
 ```
