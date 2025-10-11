@@ -3,6 +3,7 @@ from config import *
 from env import create_env
 from init_state import init_state
 
+
 if __name__ == "__main__":
     state = init_state()
     env_fn = lambda: create_env(time_scale=TIME_SCALE)

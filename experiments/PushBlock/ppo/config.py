@@ -1,78 +1,97 @@
-'''
-config.py contains config files for the model and training. Select both for a run.
-Still need to set params yourself (run/computer dependent):
-    - name
-    - workers
-    - device, storage_device
-'''
-
-### ENV INFO
-
+### ENVIRONMENT CONFIG
 ENV_PATH = "../../../envs/PushBlock"
+N_ENVS = 32
 
-ACTION_KEY = "discrete_action"
+OBSERVATION_DIM = 210
+ACTION_DIM = 7
 
+
+### CHECKPOINT AND LOGGER CONFIG
 LOG_KEYS = [
-    "generation", "time", "collection_time", "train_time",  # Training Progress Metrics
-    "return", "episode_length",                             # Performance Metrics
-    "entropy",                                              # Exploration Metrics
-    "policy_loss", "kl_approx", "clip_fraction", "ESS",     # Policy Metrics
-    "value_loss", "explained_variance",                     # Value Metrics
+    "timestep", "generation", "time", "collection_time", "train_time",  # Training Progress Metrics
+    "return", "episode_length",                                         # Performance Metrics
+    "entropy",                                                          # Exploration Metrics
+    "policy_loss", "kl_approx", "clip_fraction", "ESS",                 # Policy Metrics
+    "value_loss", "explained_variance",                                 # Value Metrics
 ]
-LOG_INDEX = "generation"
+LOG_INDEX = "timestep"
 BEST_METRIC_KEY = "return"
-
-### MODEL CONFIGS
-
-OBSERVATION_SHAPE = 210
-ACTION_SHAPE = 7
-
-# DEFAULT_MODEL_CONFIG = {
-#     "hidden_dim": 256,
-#     "n_blocks": 3,
-#     "in_features": OBSERVATION_SHAPE,
-#     "out_features": ACTION_SHAPE,
-# }
-
-# MODEL_CONFIGS = {"default_model_config": DEFAULT_MODEL_CONFIG}
-# MODEL_CONFIG_LIST = list(MODEL_CONFIGS.keys())
-
-### TRAIN CONFIGS
 
 MODEL_PATH = 'models'
 LOG_PATH = 'logs'
 CKPT_PATH = 'ckpt'
 RESULTS_PATH = 'results'
 
-# DEFAULT_TRAIN_CONFIG = {
-#     # Train Params
-#     "timestamps": 200_000,
-#     "generation_size": 2000,
 
-#     # Inner Train Loop Params
-#     "epochs": 10,
-#     "minibatch_size": 64,
+### MODEL CONFIG
 
-#     # PPO Params
-#     "epsilon": 0.2,
-#     "gamma": 0.99,
-#     "gae_lambda": 0.95,
-#     "entropy_coef": 1e-5,
+MODEL_CONFIG = {
+    "hidden_dim": 256,
+    "n_blocks": 3,
+    "in_features": OBSERVATION_DIM,
+    "out_features": ACTION_DIM,
+}
 
-#     # Optimizer Params
-#     "lr": 3e-4,
-#     "max_grad_norm": 0.5,
+### RL CONFIG
 
-#     # Checkpoint and Log Params
-#     "checkpoint_interval": 1,
-#     "log_interval": 1,
-#     "ckpt_path": CKPT_PATH,
-#     "log_path": LOG_PATH,
-#     "model_path": MODEL_PATH,
+# ENV Params
+TIME_SCALE = 5
 
-#     # Env Params
-#     "time_scale": 20,
-# }
+# PPO Params
+GAMMA = 0.99
+GAE_LAMBDA = 0.95
+EPSILON = 0.2
+ENTROPY_COEF = 5e-3
+VALUE_COEF = 1
 
-# TRAIN_CONFIGS = {"default_train_config": DEFAULT_TRAIN_CONFIG}
-# TRAIN_CONFIG_LIST = list(TRAIN_CONFIGS.keys())
+### TRAIN CONFIG
+
+# Device Specific Stuff
+import os, math, torch
+from rlkit.util import round_up
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+WORKERS = os.cpu_count() // 4
+COLLECTOR_BUFFER_SIZE = 1000 * WORKERS * N_ENVS
+
+# Config that Often Changes
+GENERATION_SIZE = round_up(COLLECTOR_BUFFER_SIZE, COLLECTOR_BUFFER_SIZE)
+GENERATIONS = 1500
+LR = 3e-4
+
+
+TRAIN_CONFIG = {
+    # Device
+    "device": device,
+    "storage_device": "cpu",
+
+    ### Collection phase
+    "workers": WORKERS,
+    "collector_buffer_size": COLLECTOR_BUFFER_SIZE,
+    "generation_size": GENERATION_SIZE,
+    "generations": GENERATIONS,
+
+    ### Advantage phase
+    "slice_len": 256,
+    "n_slices": 128,
+
+    ### Train phase
+    "epochs": 3,
+    "minibatch_size": 64,
+    "lr": LR,
+    "max_grad_norm": 0.5,
+
+    # Early Stop
+    "kl_soft_clip": 0.05,
+    "early_stop_threshold": math.ceil(GENERATION_SIZE / 64) // 2,
+    "kl_hard_clip": 0.1,
+
+    ### Checkpointing and Logging
+    "checkpoint_interval": 1,
+    "log_interval": 1,
+    "model_path": MODEL_PATH,
+    "best_metric_key": BEST_METRIC_KEY
+}
+
+### Run Config
+NAME = "run1"
+CONTINUE = True

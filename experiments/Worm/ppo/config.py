@@ -1,9 +1,9 @@
 ### ENVIRONMENT CONFIG
-ENV_PATH = "../../../envs/Crawler"
+ENV_PATH = "../../../envs/Worm"
 N_ENVS = 10
 
-OBSERVATION_DIM = 158
-ACTION_DIM = 20
+OBSERVATION_DIM = 64
+ACTION_DIM = 9
 
 
 ### CHECKPOINT AND LOGGER CONFIG
@@ -26,7 +26,7 @@ RESULTS_PATH = 'results'
 ### MODEL CONFIG
 
 MODEL_CONFIG = {
-    "hidden_dim": 1024,
+    "hidden_dim": 512,
     "n_blocks": 3,
     "in_features": OBSERVATION_DIM,
     "out_features": ACTION_DIM,
@@ -56,7 +56,7 @@ COLLECTOR_BUFFER_SIZE = 1000 * WORKERS * N_ENVS
 # Config that Often Changes
 GENERATION_SIZE = round_up(COLLECTOR_BUFFER_SIZE, COLLECTOR_BUFFER_SIZE)
 GENERATIONS = 1500
-LR = 1e-5
+LR = 3e-4
 
 
 TRAIN_CONFIG = {
@@ -75,15 +75,15 @@ TRAIN_CONFIG = {
     "n_slices": 128,
 
     ### Train phase
-    "epochs": 3,
-    "minibatch_size": 1024,
+    "epochs": 2,
+    "minibatch_size": 128,
     "lr": LR,
     "max_grad_norm": 0.5,
 
     # Early Stop
-    "kl_soft_clip": 0.03,
-    "early_stop_threshold": 3 * math.ceil(GENERATION_SIZE / 1024) // 10,
-    "kl_hard_clip": 0.05,
+    "kl_soft_clip": 0.05,
+    "early_stop_threshold": math.ceil(GENERATION_SIZE / 128) // 2,
+    "kl_hard_clip": 0.1,
 
     ### Checkpointing and Logging
     "checkpoint_interval": 1,

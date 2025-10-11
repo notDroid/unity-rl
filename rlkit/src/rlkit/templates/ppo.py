@@ -71,6 +71,8 @@ class PPOTrainer:
         self.amp_dtype   = torch.float16 if self.device_type == "cuda" else torch.float32
 
     def _init_utils(self):
+        env = self.create_env()
+
         # -------------- Watches + Metrics --------------
         self.short_watch = Stopwatch()
         self.long_watch = Stopwatch()
@@ -78,11 +80,11 @@ class PPOTrainer:
 
         # -------------- Replay Buffers --------------
         self.collect_replay_buffer = ReplayBuffer(
-            storage=LazyMemmapStorage(self.generation_size, device=self.storage_device, ndim=2 + int(self.workers > 1)),
+            storage=LazyMemmapStorage(self.generation_size, device=self.storage_device, ndim=env.batch_dims + 1 + int(self.workers > 1)),
             sampler=SliceSamplerWithoutReplacement(
                 slice_len = self.slice_len,
                 shuffle=False, strict_length=False, 
-                end_key=("next", "done")
+                end_key=("next", "done"), # Maybe let this be provided
             ),
             batch_size=self.n_slices * self.slice_len,
         )
@@ -111,6 +113,7 @@ class PPOTrainer:
                 env_device="cpu", device=self.device, storing_device=self.storage_device,
                 reset_at_each_iter=False,
             )
+        env.close()
 
     def load_state(self, 
         policy: ProbabilisticActor, value: TensorDictModule, optimizer: Optimizer, 
@@ -254,7 +257,7 @@ class PPOTrainer:
     def close(self, save=False):
         try: self.collector.shutdown()
         except: pass
-        if save and self.checkpointer: self.checkpointer.copy_model('latest', self.model_path, ('policy_state_dict', 'value_state_dict'))
+        if save and self.checkpointer: self.checkpointer.copy_model(self.model_path, 'latest', ('policy_state_dict', 'value_state_dict'))
 
     def model(self): 
         return self.policy, self.value
