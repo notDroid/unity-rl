@@ -6,6 +6,7 @@ from torch import nn
 from tensordict.nn import TensorDictModule
 from torchrl.modules import ProbabilisticActor
 from torch.optim import Optimizer
+from torch.optim.lr_scheduler import LRScheduler
 from torchrl.objectives import ClipPPOLoss
 from torchrl.collectors import SyncDataCollector, MultiSyncDataCollector
 from torchrl.data import ReplayBuffer, LazyMemmapStorage, SliceSamplerWithoutReplacement, SamplerWithoutReplacement
@@ -76,7 +77,7 @@ class PPOTrainer:
         # -------------- Watches + Metrics --------------
         self.short_watch = Stopwatch()
         self.long_watch = Stopwatch()
-        self.metric_module = SimpleMetricModule(mode="approx")
+        if not self.metric_module: self.metric_module = SimpleMetricModule(mode="approx")
 
         # -------------- Replay Buffers --------------
         self.collect_replay_buffer = ReplayBuffer(
@@ -103,7 +104,7 @@ class PPOTrainer:
                 total_frames=self.timesteps, 
                 env_device="cpu", device=self.device, storing_device=self.storage_device, 
                 reset_at_each_iter=False,
-                update_at_each_batch=False, # Manually update
+                update_at_each_batch=False, # Manually update policy weights
             )
         else:
             self.collector = SyncDataCollector(
@@ -118,7 +119,7 @@ class PPOTrainer:
     def load_state(self, 
         policy: ProbabilisticActor, value: TensorDictModule, optimizer: Optimizer, 
         loss_module: ClipPPOLoss, checkpointer: Checkpointer=None, logger: Logger=None, 
-        scaler: torch.amp.GradScaler=None, start_generation=0,
+        scaler: torch.amp.GradScaler=None, metric_module=None, start_generation=0, lr_scheduler: LRScheduler = None,
         ):
 
         self.loaded = True
@@ -132,6 +133,8 @@ class PPOTrainer:
         self.scaler = scaler
         if scaler is None:
             self.scaler = torch.amp.GradScaler(enabled=(self.amp_dtype == torch.float16))
+        self.metric_module = metric_module
+        self.lr_scheduler = lr_scheduler
         self.start_generation = start_generation
 
     def _collect(self):
@@ -149,7 +152,7 @@ class PPOTrainer:
         collection_time = self.short_watch.end()
         if self.logger: self.logger.add({"collection_time": collection_time})
 
-    def _prepare_train(self):
+    def _prepare_train(self):    
         self.train_replay_buffer.empty()
         for j, batch in enumerate(self.collect_replay_buffer):
             batch = batch.to(self.device)
@@ -180,12 +183,17 @@ class PPOTrainer:
         if self.logger: self.logger.add({"train_time": train_time})
         if self.logger: self.logger.add({"generation": 1})
         if self.logger: self.logger.add({"timestep": self.generation_size})
+
+        if self.lr_scheduler:
+            lr = self.lr_scheduler.get_last_lr()[0]
+            self.logger.acc({"lr": lr})
+            self.lr_scheduler.step()    
         
     def _train_step(self, batch, epoch, j):
         # -------------- a. Compute Loss --------------
         with torch.autocast(device_type=self.device_type, dtype=self.amp_dtype, enabled=(self.amp_dtype==torch.float16)):
             loss_data = self.loss_module(batch)
-            loss = loss_data["loss_objective"] + loss_data["loss_critic"] + loss_data["loss_entropy"]
+            loss = loss_data["loss_objective"].mean() + loss_data["loss_critic"].mean() + loss_data["loss_entropy"].mean()
 
         # -------------- b. KL Safety Check --------------
         kl_approx = loss_data["kl_approx"].mean().cpu().item()
@@ -264,4 +272,4 @@ class PPOTrainer:
     
     def history(self):
         return self.logger.dataframe()
-    
+

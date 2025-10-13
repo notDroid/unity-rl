@@ -249,6 +249,7 @@ class MultiVersionCheckpointer:
     def save_progress(self, state_obj):
         # Add new checkpoint
         generation = self._latest() + 1
+        state_obj["checkpoint_generation"] = generation
         atomic_torch_save(state_obj, self.path_fn(generation))
 
         # Enforce invariant

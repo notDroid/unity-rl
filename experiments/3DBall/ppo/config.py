@@ -13,6 +13,7 @@ LOG_KEYS = [
     "entropy",                                                          # Exploration Metrics
     "policy_loss", "kl_approx", "clip_fraction", "ESS",                 # Policy Metrics
     "value_loss", "explained_variance",                                 # Value Metrics
+    "lr", "alpha",
 ]
 LOG_INDEX = "timestep"
 BEST_METRIC_KEY = "return"
@@ -41,7 +42,7 @@ TIME_SCALE = 5
 GAMMA = 0.99
 GAE_LAMBDA = 0.95
 EPSILON = 0.2
-ENTROPY_COEF = 1e-6
+ENTROPY_COEF = 1
 VALUE_COEF = 1
 
 ### TRAIN CONFIG
@@ -55,9 +56,15 @@ COLLECTOR_BUFFER_SIZE = 500 * WORKERS * N_ENVS
 
 # Config that Often Changes
 GENERATION_SIZE = round_up(COLLECTOR_BUFFER_SIZE, COLLECTOR_BUFFER_SIZE)
-GENERATIONS = 100
-LR = 1e-6
+GENERATIONS = 150
+LR = 1e-4
+WARMUP_GENERATIONS = 1
+INIT_LR = 1e-6
 
+# Entropy
+ALPHA_INIT = 1e-2
+EXPLORATION_TARGET_ENTROPY = 0.5 * (math.log(2) * ACTION_DIM)
+EXPLOITATION_TARGET_ENTRPOY = -ACTION_DIM
 
 TRAIN_CONFIG = {
     # Device
@@ -89,9 +96,12 @@ TRAIN_CONFIG = {
     "checkpoint_interval": 1,
     "log_interval": 1,
     "model_path": MODEL_PATH,
-    "best_metric_key": BEST_METRIC_KEY
+    "best_metric_key": BEST_METRIC_KEY,
+
+    # Entropy
+    "alpha_coef": 0.01,
 }
 
 ### Run Config
-NAME = "run1"
-CONTINUE = True
+NAME = "run2"
+CONTINUE = False
