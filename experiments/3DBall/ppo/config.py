@@ -52,11 +52,11 @@ import os, math, torch
 from rlkit.util import round_up
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 WORKERS = os.cpu_count() // 2
-COLLECTOR_BUFFER_SIZE = 500 * WORKERS * N_ENVS
+COLLECTOR_BUFFER_SIZE = 512 * WORKERS * N_ENVS
 
 # Config that Often Changes
 GENERATION_SIZE = round_up(COLLECTOR_BUFFER_SIZE, COLLECTOR_BUFFER_SIZE)
-GENERATIONS = 150
+GENERATIONS = 100
 LR = 1e-4
 WARMUP_GENERATIONS = 1
 INIT_LR = 1e-6
@@ -103,5 +103,5 @@ TRAIN_CONFIG = {
 }
 
 ### Run Config
-NAME = "run2"
-CONTINUE = False
+NAME = "run3"
+CONTINUE = True

@@ -3,10 +3,10 @@ import numpy as np
 import tempfile
 import torch
 
-def atomic_torch_save(state_obj, path):
+def atomic_torch_save(state_obj, path, **kwargs):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with tempfile.NamedTemporaryFile(delete=False, dir=os.path.dirname(path)) as tmp:
-        torch.save(state_obj, tmp)
+        torch.save(state_obj, tmp, **kwargs)
         tmp.flush()
         os.fsync(tmp.fileno())
         tmp_path = tmp.name
@@ -67,9 +67,9 @@ class Checkpointer:
         checkpoint = torch.load(self.best_path, weights_only=False, map_location='meta')
         return checkpoint[self.metric_key]
 
-    def save_progress(self, state_obj):
+    def save_progress(self, state_obj, **kwargs):
         # Add new latest
-        atomic_torch_save(state_obj, self.latest_path)
+        atomic_torch_save(state_obj, self.latest_path, **kwargs)
 
         # Check if new best
         if not self.metric_key: return
@@ -77,7 +77,7 @@ class Checkpointer:
         metric = state_obj[self.metric_key]
         if metric is None: return
         if metric >= self._get_best_metric():
-            atomic_torch_save(state_obj, self.best_path)
+            atomic_torch_save(state_obj, self.best_path, **kwargs)
 
     def load_progress(self, generation="latest", **kwargs):
         if generation == "latest": path = self.latest_path
@@ -85,14 +85,14 @@ class Checkpointer:
         else: raise RuntimeError(f"Invalid ckpt type: {generation} not in (\"latest\", \"best\")")
 
         if not os.path.exists(path): return None
-        return torch.load(path, **kwargs)
+        return torch.load(path, weights_only=False, **kwargs)
 
-    def copy_model(self, model_path, generation="latest", keys = None):
+    def copy_model(self, model_path, generation="latest", keys = None, **kwargs):
         if generation == "latest": path = self.latest_path
         elif generation == "best": path = self.best_path
         else: raise RuntimeError(f"Invalid ckpt type: {generation} not in (\"latest\", \"best\")")
 
-        state_obj = torch.load(path, weights_only=False)
+        state_obj = torch.load(path, weights_only=False, **kwargs)
 
         if keys is not None:
             state_obj = {key: state_obj[key] for key in keys}
@@ -201,7 +201,7 @@ class MultiVersionCheckpointer:
     def _get_best_metric(self):
         if not os.path.exists(self.best_path):
             return float("-inf")
-        checkpoint = torch.load(self.best_path, weights_only=True, map_location='meta')
+        checkpoint = torch.load(self.best_path, weights_only=False, map_location='meta')
         return checkpoint[self.metric_key]
 
     def reset(self):
@@ -229,7 +229,7 @@ class MultiVersionCheckpointer:
         if generation != 'latest':
             # Retrieve checkpoint if best
             if generation == 'best':
-                checkpoint = torch.load(path, weights_only=True, map_location='meta')
+                checkpoint = torch.load(path, weights_only=False, map_location='meta')
                 generation = int(checkpoint["checkpoint_generation"])
             
             # Enforce invariant
@@ -246,11 +246,11 @@ class MultiVersionCheckpointer:
         self._enforce(generation)
         return
 
-    def save_progress(self, state_obj):
+    def save_progress(self, state_obj, **kwargs):
         # Add new checkpoint
         generation = self._latest() + 1
         state_obj["checkpoint_generation"] = generation
-        atomic_torch_save(state_obj, self.path_fn(generation))
+        atomic_torch_save(state_obj, self.path_fn(generation), **kwargs)
 
         # Enforce invariant
         self._enforce(generation)
@@ -261,7 +261,7 @@ class MultiVersionCheckpointer:
         metric = state_obj[self.metric_key]
         if metric is None: return
         if metric >= self._get_best_metric():
-            atomic_torch_save(state_obj, self.best_path)
+            atomic_torch_save(state_obj, self.best_path, **kwargs)
 
     def load_progress(self, generation="latest", **kwargs):
         if generation == "latest": path = self.path_fn(self._latest())
@@ -269,14 +269,14 @@ class MultiVersionCheckpointer:
         else: path = self.path_fn(generation)
 
         if not os.path.exists(path): return None
-        return torch.load(path, **kwargs)
+        return torch.load(path, weights_only=False, **kwargs)
 
-    def copy_model(self, model_path, generation="latest", keys=None):
+    def copy_model(self, model_path, generation="latest", keys=None, **kwargs):
         if generation == "latest": path = self.path_fn(self._latest())
         elif generation == "best": path = self.best_path
         else: path = self.path_fn(generation)
 
-        state_obj = torch.load(path, weights_only=True)
+        state_obj = torch.load(path, weights_only=False, **kwargs)
 
         if keys is not None:
             state_obj = {key: state_obj[key] for key in keys}

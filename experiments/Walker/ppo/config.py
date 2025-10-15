@@ -41,7 +41,7 @@ TIME_SCALE = 5
 GAMMA = 0.99
 GAE_LAMBDA = 0.95
 EPSILON = 0.2
-ENTROPY_COEF = 1e-2
+ENTROPY_COEF = 1e-3
 VALUE_COEF = 1
 
 ### TRAIN CONFIG
@@ -55,8 +55,8 @@ COLLECTOR_BUFFER_SIZE = 1000 * WORKERS * N_ENVS
 
 # Config that Often Changes
 GENERATION_SIZE = round_up(COLLECTOR_BUFFER_SIZE, COLLECTOR_BUFFER_SIZE)
-GENERATIONS = 1000
-LR = 1e-5
+GENERATIONS = 4000
+LR = 1e-7
 
 
 TRAIN_CONFIG = {
@@ -75,7 +75,7 @@ TRAIN_CONFIG = {
     "n_slices": 128,
 
     ### Train phase
-    "epochs": 2,
+    "epochs": 1,
     "minibatch_size": 128,
     "lr": LR,
     "max_grad_norm": 0.5,

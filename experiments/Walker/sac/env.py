@@ -7,13 +7,13 @@ from torchrl.envs.transforms import ExcludeTransform, ObservationNorm, ClipTrans
 from rlkit.transforms import append_batch_transform, InvertibleCatTensors, RenameAction, SoftResetWrapper, InvertibleRename
 from mlagents_envs.side_channel.engine_configuration_channel import EngineConfigurationChannel
 
-from config import ENV_PATH
+# from config import ENV_PATH
 
 def _create_unity_env(graphics, **kwargs):
         from mlagents_envs import environment # Force load for multiproccessing
         env = UnityMLAgentsEnv(
-            file_name=ENV_PATH, 
-            # registered_name="Walker",
+            # file_name=ENV_PATH, 
+            registered_name="Walker",
             worker_id=np.random.randint(10000), 
             no_graphics=(not graphics), **kwargs,
             device="cpu",

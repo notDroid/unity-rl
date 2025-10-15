@@ -8,33 +8,9 @@
 
 # Ignore Unity build outputs
 envs/
-*.app
-*.exe
-*.apk
-*.xcodeproj
-*.sln
-*.user
-*.csproj
-
-# Ignore build artifacts
-[Bb]uild/
-[Bb]uilds/
-[Ll]ibrary/
-[Tt]emp/
-[Oo]bj/
-[Mm]emoryCaptures/
-sysinfo.txt
 
 # Ignore logs
-*.log
-
-# Ignore generated binaries
-*.dll
-*.so
-*.dylib
-*.bundle
-*.pdb
-*.mdb
+out.txt
 ###
 
 # Byte-compiled / optimized / DLL files
