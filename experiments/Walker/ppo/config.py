@@ -8,7 +8,7 @@ ACTION_DIM = 39
 
 ### CHECKPOINT AND LOGGER CONFIG
 LOG_KEYS = [
-    "timestep", "generation", "time", "collection_time", "train_time",  # Training Progress Metrics
+    "timestep", "time", "collection_time", "train_time",  # Training Progress Metrics
     "return", "episode_length",                                         # Performance Metrics
     "entropy",                                                          # Exploration Metrics
     "policy_loss", "kl_approx", "clip_fraction", "ESS",                 # Policy Metrics

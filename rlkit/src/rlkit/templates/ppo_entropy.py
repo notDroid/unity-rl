@@ -18,6 +18,15 @@ class PPOWithEntropySchedule(PPOTrainer):
 
         return super()._prepare_train()   
 
+
+'''
+Some thoughts on Dynamic Entropy: 
+It doesn't work that well. 
+In high dim action spaces the space of "correct" answers seem to be a higher percent of the space.
+This means that good solutions can still be high entropy.
+So setting a target entropy of say -dim(A) for continuous action spaces drives alpha to 0 and leads to a worse solution.
+Better off just scheduling the entropy, like phase 1: 1e-2, phase 2: 1e-3.
+'''
 class PPOWithDynamicEntropy(PPOTrainer):
     def __init__(self, create_env, train_config):
         super().__init__(create_env, train_config)

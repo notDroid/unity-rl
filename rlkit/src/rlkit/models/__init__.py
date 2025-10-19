@@ -1,2 +1,2 @@
-from .ffn import *
+from .mlp import *
 from .utils import *
