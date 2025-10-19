@@ -3,20 +3,22 @@ This repo contains examples of solving reinforcement learning scenarios from uni
 It contains environments from the unity [mlagents](https://github.com/Unity-Technologies/ml-agents) repo.
 
 The projects in this repo are under experiments/ and organized as: [environment]/[experiment]/. 
-Each experiment folder is self contained (a full project on its own). 
+For example "experiments/3DBall/ppo".
 
 ## **Usage**
 
 ### **Unity Environments**:
+You can either use the built in unity environments or download them manually. I reccomend using the built in ones at first, but the manual download ones look better.
 
-In order to use this repo you need to [download](https://docs.unity3d.com/Packages/com.unity.ml-agents@4.0/manual/Installation.html) the repo containing the environments:
+**Manual Download**:
+-  [Download](https://docs.unity3d.com/Packages/com.unity.ml-agents@4.0/manual/Installation.html) the repo containing the environments:
 
-Then open the project in the unity editor (select the Project/ folder from mlagents), select a scene from an environment and build it for whatever platform you're on.
-Create an env/ folder at the root of this repo and place compiled environments in it.
+- Then open the project in the unity editor (select the Project/ folder from mlagents), select a scene from an environment and build it for whatever platform you're on.
+- Create an env/ folder at the root of this repo and place compiled environments in it.
 
 ### **Python Environment**:
 
-First of all conda is required (something weird about grpcio) so make sure its properly setup. Then run these at project root:
+First of all conda is required (something weird about grpcio, wheel won't build) so make sure its properly setup. Then run these at project root:
 
 ```
 # Create conda environment
@@ -33,3 +35,17 @@ python -m pip install pandas matplotlib ipykernel
 python -m pip install torch torchrl 
 python -m pip install -e rlkit
 ```
+
+### **RLKit:**
+This contains reusable resources. Like models (mlp/cnn), utils (checkpointer/logger), and training templates (ppo/sac).
+
+If you're working on an environment, I reccomend copy and pasting the template in and customizing it from there. It is not made for general use, just as a starting point. 
+
+## **TODO List:**
+- SAC
+    - Add GPU support (with amp)
+    - Customize loss module: separate entropy and reward heads, separate discount factor for entropy reward.
+- Add rest of the unity environments.
+    - Visual and MARL environments.
+- Set up docker for benchmark training runs.
+- Learn about how to do distributed training.
