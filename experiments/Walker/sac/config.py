@@ -13,8 +13,8 @@ RESULTS_PATH = 'results'
 LOG_KEYS = [
     "timestep", "time", "collect_wait_time", "train_time",  # Training Progress Metrics
     "score",                                                # Latest Metrics
-    "policy_loss", "qvalue_loss",                           # Loss Metrics      
-    "entropy", "td_error",                                  # Batch Metrics (computed with loss)  
+    "policy_loss", "qvalue_loss", "alpha",                             # Loss Metrics      
+    "entropy", "td_error",                              # Batch Metrics (computed with loss)  
     "return", "episode_length", "eval_entropy",             # Eval Performance Metrics                       
 ]
 LOG_INDEX = "timestep"

@@ -11,7 +11,7 @@ For example "experiments/3DBall/ppo".
 You can either use the built in unity environments or download them manually. I reccomend using the built in ones at first, but the manual download ones look better.
 
 **Manual Download**:
--  [Download](https://docs.unity3d.com/Packages/com.unity.ml-agents@4.0/manual/Installation.html) the repo containing the environments:
+-  [Download](https://docs.unity3d.com/Packages/com.unity.ml-agents@4.0/manual/Installation.html) the repo containing the environments.
 
 - Then open the project in the unity editor (select the Project/ folder from mlagents), select a scene from an environment and build it for whatever platform you're on.
 - Create an env/ folder at the root of this repo and place compiled environments in it.
@@ -35,6 +35,7 @@ python -m pip install pandas matplotlib ipykernel
 python -m pip install torch torchrl 
 python -m pip install -e rlkit
 ```
+Note that the numpy version conflicts with mlagents because of gym (deprecated), but we don't use gym anyways so we are safe to use the latest version of numpy. This also means we can't use a requirements.txt.
 
 ### **RLKit:**
 This contains reusable resources. Like models (mlp/cnn), utils (checkpointer/logger), and training templates (ppo/sac).
