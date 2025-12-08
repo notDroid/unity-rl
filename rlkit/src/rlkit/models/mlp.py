@@ -1,25 +1,25 @@
 import torch
 import torch.nn as nn
 
-class GeGLU(nn.Module):
-    def __init__(self, in_features, out_features, bias=True):
+class GatedLinear(nn.Module):
+    def __init__(self, in_features, out_features, activation=nn.SiLU()):
         super().__init__()
-        self.linear = nn.Linear(in_features, 2 * out_features, bias=bias)
-        self.gelu = nn.GELU()
+        self.linear = nn.Linear(in_features, 2 * out_features, bias=False)
+        self.act = activation
 
     def forward(self, x):
         x = self.linear(x)
         x, gate = torch.chunk(x, chunks=2, dim=-1)
-        return x * self.gelu(gate)
+        return x * self.act(gate)
 
 class MLPBlock(nn.Module):
-    def __init__(self, features, expansion_factor=8/3, bias=False):
+    def __init__(self, features, expansion_factor=8/3):
         super().__init__()
         expanded_features = int(features * expansion_factor)
 
         self.norm = nn.RMSNorm((features,))
-        self.geglu = GeGLU(features, expanded_features, bias=bias)
-        self.proj_down = nn.Linear(expanded_features, features)
+        self.geglu = GatedLinear(features, expanded_features)
+        self.proj_down = nn.Linear(expanded_features, features, bias=False)
 
     def forward(self, x):
         residual = x
