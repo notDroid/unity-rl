@@ -7,7 +7,7 @@
 *.pt
 
 # Ignore Unity build outputs
-envs/
+built_envs/
 
 # Ignore logs
 out.txt

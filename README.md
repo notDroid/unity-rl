@@ -1,9 +1,10 @@
-# Unity RL Solutions
-This repo contains examples of solving reinforcement learning scenarios from unity with torchRL. 
-It contains environments from the unity [mlagents](https://github.com/Unity-Technologies/ml-agents) repo.
+# Unity ML-Agents with TorchRL
+This repo contains examples of solving reinforcement learning scenarios from unity [mlagents](https://github.com/Unity-Technologies/ml-agents) with TorchRL. 
+
+**Projects:**
 
 The projects in this repo are under experiments/ and organized as: [environment]/[experiment]/. 
-For example "experiments/3DBall/ppo".
+- For example "experiments/3DBall/ppo".
 
 ## **Usage**
 
@@ -35,18 +36,21 @@ python -m pip install pandas matplotlib ipykernel
 python -m pip install torch torchrl 
 python -m pip install -e rlkit
 ```
-Note that the numpy version conflicts with mlagents because of gym (deprecated), but we don't use gym anyways so we are safe to use the latest version of numpy. This also means we can't use a requirements.txt.
+Note that the numpy version conflicts with mlagents because of gym (deprecated), but we don't use gym anyways so we are safe to use the latest version of numpy. This also means we have to manual download everything (no requirements.txt).
 
-### **RLKit:**
-This contains reusable resources. Like models (mlp/cnn), utils (checkpointer/logger), and training templates (ppo/sac).
+### **RLKit**
+This package contains reusable resources:
+- mlagent environments (with torchrl transforms)
+- training templates (ppo/sac)
+- utils (checkpointer/logger)
+- models (mlp/cnn)
 
-If you're working on an environment, I reccomend copy and pasting the template in and customizing it from there. It is not made for general use, just as a starting point. 
+If you're working on an environment I reccomend copy and pasting the template in and customizing it from there, it is not made for general use.
 
-## **TODO List:**
+## **TODO List**
+- Set up TaskFile for experiments
 - SAC
-    - Add GPU support (with amp)
     - Customize loss module: separate entropy and reward heads, separate discount factor for entropy reward.
 - Add rest of the unity environments.
     - Visual and MARL environments.
 - Set up docker for benchmark training runs.
-- Learn about how to do distributed training.
