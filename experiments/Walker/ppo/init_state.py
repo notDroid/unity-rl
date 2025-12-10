@@ -1,6 +1,6 @@
 import torch
 from torch import optim
-from rlkit.util import Checkpointer, Logger, MultiVersionCheckpointer
+from rlkit.utils import Checkpointer, Logger, MultiVersionCheckpointer
 from train_util import make_loss_module, create_policy, create_value
 
 from config import *

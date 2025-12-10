@@ -1,6 +1,6 @@
 import torch
 from torch import optim
-from rlkit.util import Checkpointer, Logger, MultiVersionCheckpointer, CosineWithLinearWarmupSchedule
+from rlkit.utils import Checkpointer, Logger, MultiVersionCheckpointer, CosineWithLinearWarmupSchedule
 from rlkit.modules import AutomaticEntropyModule
 from train_util import make_loss_module, create_policy, create_value
 

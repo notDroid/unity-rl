@@ -48,7 +48,7 @@ VALUE_COEF = 1
 
 # Device Specific Stuff
 import os, math, torch
-from rlkit.util import round_up
+from rlkit.utils import round_up
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 WORKERS = os.cpu_count() // 2
 COLLECTOR_BUFFER_SIZE = 1000 * WORKERS * N_ENVS

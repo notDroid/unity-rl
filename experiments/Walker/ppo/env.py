@@ -4,7 +4,7 @@ import numpy as np
 # Environment
 from torchrl.envs.libs import UnityMLAgentsEnv
 from torchrl.envs.transforms import ExcludeTransform, ObservationNorm, ClipTransform, RewardScaling, RenameTransform
-from rlkit.transforms import append_batch_transform, InvertibleCatTensors, RenameAction, SoftResetWrapper, InvertibleRename
+from rlkit.envs.transforms import append_batch_transform, InvertibleCatTensors, RenameAction, SoftResetWrapper, InvertibleRename
 from mlagents_envs.side_channel.engine_configuration_channel import EngineConfigurationChannel
 
 from config import ENV_PATH
