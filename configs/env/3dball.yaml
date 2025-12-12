@@ -1,0 +1,11 @@
+name: "3DBall"
+
+observation: 
+  type: vector
+  dim: 8
+action:
+  type: continuous
+  dim: 2
+info:
+  batch_dims: 1
+  n_envs: 12

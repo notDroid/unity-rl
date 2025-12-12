@@ -3,41 +3,24 @@ import torch
 from torch import nn
 
 # TorchRL
-from tensordict.nn import TensorDictModule
-from torchrl.modules import ProbabilisticActor
-from torch.optim import Optimizer
-from torch.optim.lr_scheduler import LRScheduler
-from torchrl.objectives import ClipPPOLoss
 from torchrl.collectors import SyncDataCollector, MultiSyncDataCollector
 from torchrl.data import ReplayBuffer, LazyMemmapStorage, SliceSamplerWithoutReplacement, SamplerWithoutReplacement
 
 # Util
-import numpy as np
-from operator import itemgetter as get
-from .ppo_config import PPOConfig
-from rlkit.utils import Stopwatch, Checkpointer, LoggerBase, SimpleMetricModule
-from dataclasses import dataclass
-from typing import Optional
+from .ppo_config import PPOTrainConfig, PPOState
+from rlkit.utils import Stopwatch, Checkpointer, LoggerBase, SimpleMetricModule, atomic_torch_save
 
-### PPO State to Save
-
-@dataclass
-class PPOState:
-    policy: ProbabilisticActor
-    value: TensorDictModule
-    optimizer: Optimizer
-    loss_module: ClipPPOLoss
-
-    checkpointer: Optional[Checkpointer] = None
-    logger: Optional[LoggerBase] = None
-    scaler: Optional[torch.amp.GradScaler] = None
-    metric_module: Optional[SimpleMetricModule] = None
-    lr_scheduler: Optional[LRScheduler] = None
+ppo_log_keys = [
+    "timestep", "generation", "time", "collection_time", "train_time",  # Training Progress Metrics
+    "return", "episode_length",                                         # Performance Metrics (expected from metric module)
+    "entropy",                                                          # Exploration Metrics (expected from metric module)
+    "policy_loss", "kl_approx", "clip_fraction", "ESS",                 # Policy Metrics
+    "value_loss", "explained_variance",                                 # Value Metrics
+]
 
 ### Stateless Helpers
-
 class PPOCollectorModule:
-    def __init__(self, create_env: callable, ppo_config: PPOConfig, ppo_state: PPOState):
+    def __init__(self, create_env: callable, ppo_config: PPOTrainConfig, ppo_state: PPOState):
         self.create_env = create_env
         self.config = ppo_config
         self.state = ppo_state
@@ -86,7 +69,7 @@ class PPOCollectorModule:
             self.buffer.extend(data)
 
 class PPOTrainModule:
-    def __init__(self, ppo_config: PPOConfig, ppo_state: PPOState):
+    def __init__(self, ppo_config: PPOTrainConfig, ppo_state: PPOState):
         self.config = ppo_config
         self.state = ppo_state
 
@@ -156,11 +139,16 @@ class PPOTrainModule:
                     return
                 if metrics == "skip": continue
 
-                if self.state.logger: self.state.logger.acc(metrics, mode='ema')
+                if self.state.logger: self.state.logger.acc(metrics, mode='ema', beta=0.95)
         self.buffer.empty()
+
+        if self.state.lr_scheduler:
+            lr = self.state.lr_scheduler.get_last_lr()[0]
+            if self.state.logger: self.state.logger.acc({"lr": lr})
+            self.state.lr_scheduler.step()
     
 class PPOAdvantageModule:
-    def __init__(self, ppo_config: PPOConfig, ppo_state: PPOState, collect_module: PPOCollectorModule, train_module: PPOTrainModule):
+    def __init__(self, ppo_config: PPOTrainConfig, ppo_state: PPOState, collect_module: PPOCollectorModule, train_module: PPOTrainModule):
         self.config = ppo_config
         self.state = ppo_state
         self.collect_module = collect_module
@@ -203,10 +191,11 @@ class PPOAdvantageModule:
         return final_metrics
 
 class PPOBasic:
-    def __init__(self, create_env: callable, ppo_config: PPOConfig, ppo_state: PPOState):
+    def __init__(self, create_env: callable, ppo_config: PPOTrainConfig, ppo_state: PPOState):
         self.create_env = create_env
         self.config = ppo_config
         self.state = ppo_state
+        self.verbose = False
 
         # Stateless Helper Modules
         self.collect_module = PPOCollectorModule(create_env, ppo_config, ppo_state)
@@ -220,27 +209,33 @@ class PPOBasic:
     def step(self, gen):
         self.long_watch.start()
 
+        if self.verbose: print(f"[{gen+1}/{self.config.generations}] Starting Generation")
         # 1. Collect Trajectory Dataset
         self.short_watch.start()
         self.collect_module.step()
+        collection_time = self.short_watch.end()
         if self.state.logger: 
-            self.state.logger.add({"collection_time": self.short_watch.end()})
-
+            self.state.logger.add({"collection_time": collection_time})
+        if self.verbose: print(f"[{gen+1}/{self.config.generations}] Collected Data in {collection_time}")
+        
         # 2. Compute Advantage + Value Targets
         metrics = self.adv_module.step()
 
         # 3. Train Loop
         self.short_watch.start()
         self.train_module.train()
+        train_time = self.short_watch.end()
         if self.state.logger: 
-            self.state.logger.add({"train_time": self.short_watch.end()})
+            self.state.logger.add({"train_time": train_time})
+        if self.verbose: print(f"[{gen+1}/{self.config.generations}] Trained in {train_time}")
 
         # 4. Log and Checkpoint
-        if self.state.logger:
+        if self.state.logger and (gen % self.config.log_interval) == 0:
             self.state.logger.add({"time": self.long_watch.end()})
             self._log_step()
         if self.state.checkpointer and (gen % self.config.checkpoint_interval) == 0:
             self._ckpt_step(gen, metrics)
+        if self.verbose and not self.state.logger: print(f"[{gen+1}/{self.config.generations}] Step Results: {metrics}")
 
         return metrics
 
@@ -254,6 +249,8 @@ class PPOBasic:
         }
         if self.config.best_metric_key:
             state_obj[self.config.best_metric_key] =  metrics[self.config.best_metric_key]
+        if self.state.lr_scheduler:
+            state_obj["lr_scheduler_state_dict"] = self.state.lr_scheduler.state_dict()
         
         self.state.checkpointer.save_progress(state_obj)
 
@@ -261,18 +258,17 @@ class PPOBasic:
         if self.state.logger: self.state.logger.add({"generation": 1})
         if self.state.logger: self.state.logger.add({"timestep": self.config.generation_size})
 
-        if self.state.lr_scheduler:
-            lr = self.state.lr_scheduler.get_last_lr()[0]
-            self.state.logger.acc({"lr": lr})
-            self.state.lr_scheduler.step()
+        self.state.logger.next(print_row=self.verbose)
 
-        self.state.logger.next(print_row=True)
-
-    def close(self, save=False):
+    def close(self, model_path=None):
         try: self.collect_module.collector.shutdown()
         except: pass
-        if save and self.state.checkpointer: 
-            self.state.checkpointer.copy_model(self.config.model_path, 'latest', ('policy_state_dict', 'value_state_dict'))
+        if model_path: 
+            state_obj = {
+                "policy_state_dict": self.state.policy.state_dict(),
+                "value_state_dict": self.state.value.state_dict(),
+            }
+            atomic_torch_save(state_obj, path=model_path)
 
     def model(self): 
         return self.state.policy, self.state.value
@@ -280,7 +276,7 @@ class PPOBasic:
     def history(self):
         return self.state.logger.dataframe()
     
-    def run(self):
+    def run(self, verbose=False):
+        self.verbose = verbose
         for gen in range(self.config.start_generation, self.config.generations):
             self.step(gen)
-        self.close(save=True)

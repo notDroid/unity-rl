@@ -1,0 +1,63 @@
+env:
+  name: 3DBall
+  observation:
+    type: vector
+    dim: 8
+  action:
+    type: continuous
+    dim: 2
+  info:
+    batch_dims: 1
+    n_envs: 12
+  params:
+    time_scale: 10
+run_name: run2
+algo:
+  name: ppo
+  _target_: ppo.PPORunner
+  params:
+    epsilon: 0.2
+    entropy_coef: 0.001
+    gamma: 0.99
+trainer:
+  _target_: rlkit.templates.PPOBasic
+  params:
+    generations: 100
+    generation_size: 10000
+    slice_len: 128
+    n_slices: 256
+    epochs: 2
+    minibatch_size: 256
+    workers: 8
+    env_batch_dim: 1
+    kl_soft_clip: 0.02
+    early_stop_threshold: 32
+    kl_hard_clip: 0.05
+model:
+  _target_: rlkit.models.MLP
+  params:
+    in_features: ${env.observation.dim}
+    out_features: ${env.action.dim}
+    n_blocks: 1
+    hidden_dim: 32
+optimizer:
+  _target_: torch.optim.Adam
+  params:
+    lr: 1.0e-06
+dir: experiments/${env.name}/${algo.name}
+model_path: ${dir}/models/${run_name}.pt
+results_path: ${dir}/results/${run_name}.png
+logger:
+  _target_: rlkit.utils.TensorBoardLogger
+  log_dir: ${dir}/logs/${run_name}
+checkpointer:
+  _target_: rlkit.utils.Checkpointer
+  ckpt_path: ${dir}/ckpts
+  name: ${run_name}
+lr_scheduler:
+  _target_: rlkit.utils.CosineWithLinearWarmupSchedule
+  warmup_epochs: 1
+  initial_lr: 1.0e-06
+  max_lr: 0.0001
+verbose: true
+continue_: false

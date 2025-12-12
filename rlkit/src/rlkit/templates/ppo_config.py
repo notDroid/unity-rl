@@ -1,6 +1,15 @@
 from dataclasses import dataclass, field
-import torch
 from math import ceil
+
+import torch
+from tensordict.nn import TensorDictModule
+from torchrl.modules import ProbabilisticActor
+from torch.optim import Optimizer
+from torch.optim.lr_scheduler import LRScheduler
+from torchrl.objectives import ClipPPOLoss
+
+from typing import Optional
+from rlkit.utils import Checkpointer, LoggerBase, SimpleMetricModule
 
 
 '''
@@ -20,8 +29,8 @@ Optional Config:
     4. max_grad_norm, adv_clip
 '''
 
-@dataclass # (frozen=True)
-class PPOConfig:
+@dataclass
+class PPOTrainConfig:
     # Required parameters
     generations: int
     generation_size: int
@@ -38,7 +47,7 @@ class PPOConfig:
     device: str = "cpu"
     storage_device: str = "cpu"
     collector_buffer_size: int | None = None
-    env_batch_dim: int = 1
+    env_batch_dim: int = 0
 
     kl_soft_clip: float | None = None
     kl_hard_clip: float | None = None
@@ -67,3 +76,17 @@ class PPOConfig:
 
         self.device_type = "cuda" if str(self.device).startswith("cuda") else "cpu"
         self.amp_dtype = torch.float16 if self.device_type == "cuda" else torch.float32
+
+# PPO State to Save
+@dataclass
+class PPOState:
+    policy: ProbabilisticActor
+    value: TensorDictModule
+    loss_module: ClipPPOLoss
+    optimizer: Optimizer
+
+    checkpointer: Optional[Checkpointer] = None
+    logger: Optional[LoggerBase] = None
+    scaler: Optional[torch.amp.GradScaler] = None
+    metric_module: Optional[SimpleMetricModule] = None
+    lr_scheduler: Optional[LRScheduler] = None

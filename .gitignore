@@ -8,9 +8,11 @@
 
 # Ignore Unity build outputs
 built_envs/
+temp/
 
 # Ignore logs
 out.txt
+outputs/
 ###
 
 # Byte-compiled / optimized / DLL files
@@ -229,3 +231,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+
+### Special Inclusions
+!configs/env/

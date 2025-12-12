@@ -32,7 +32,7 @@ python -m pip install mlagents==1.1.0
 python -m pip install numpy==2.2.6
 
 # Install toolkit
-python -m pip install pandas matplotlib ipykernel
+python -m pip install pandas matplotlib ipykernel hydra-core seaborn
 python -m pip install torch torchrl 
 python -m pip install -e rlkit
 ```

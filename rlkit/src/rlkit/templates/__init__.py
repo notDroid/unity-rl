@@ -1,2 +1,2 @@
 from .ppo import *
-from .ppo_entropy import *
+from .ppo_config import *

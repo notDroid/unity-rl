@@ -51,6 +51,9 @@ class Checkpointer:
         self.metric_key = metric_key
         self.best_metric = float("-inf")
 
+        # Make dir
+        os.makedirs(ckpt_path, exist_ok=True)
+
     def reset(self):
         ls = os.listdir(self.path)
         for file_name in ls:
