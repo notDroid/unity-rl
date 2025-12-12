@@ -29,7 +29,8 @@ class PPORunner:
 
         # Policy
         policy_config = model_config.copy()
-        policy_config["out_features"] *= 2
+        if self.config.env.action.type == "continuous":
+            policy_config["out_features"] *= 2
         policy_base = Model(**policy_config)
         policy = PolicyWrapper(policy_base, policy_type=self.config.env.action.type).to(device)
 

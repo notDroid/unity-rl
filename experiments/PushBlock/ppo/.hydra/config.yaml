@@ -1,80 +1,63 @@
-run_name: run1
-
-# 1. Environment
-defaults:
-  - env: 3dball
-  - _self_
-
 env:
+  name: PushBlock
+  observation:
+    type: vector
+    dim: 210
+  action:
+    type: discrete
+    dim: 7
+  info:
+    batch_dims: 1
+    n_envs: 32
   params:
     time_scale: 10
-
-# 2. Algorithm
+run_name: run1
 algo:
   name: ppo
   _target_: ppo.PPORunner
   params:
     epsilon: 0.2
-    entropy_coef: 1e-3
+    entropy_coef: 0.1
     gamma: 0.99
-
 trainer:
   _target_: rlkit.templates.PPOBasic
   params:
-    generations: 100
-    generation_size: 10_000
+    generations: 200
+    generation_size: 100000
     slice_len: 128
     n_slices: 256
-    epochs: 2
+    epochs: 10
     minibatch_size: 256
-
     workers: 8
     env_batch_dim: 1
-
     kl_soft_clip: 0.02
     early_stop_threshold: 32
     kl_hard_clip: 0.05
-
-# 3. Model
 model:
   _target_: rlkit.models.MLP
   params:
-    in_features: "${env.observation.dim}"
-    out_features: "${env.action.dim}"
-    n_blocks: 1
+    in_features: ${env.observation.dim}
+    out_features: ${env.action.dim}
+    n_blocks: 2
     hidden_dim: 32
-
-# 4. State
 optimizer:
   _target_: torch.optim.Adam
   params:
-    lr: 1e-6 # Matches initial lr schedule
-
-
-### Utility
-
-# Change working directory
+    lr: 1.0e-06
 dir: experiments/${env.name}/${algo.name}
-hydra:
-  run:
-    dir: ${dir}
 model_path: ${dir}/models/${run_name}.pt
 results_path: ${dir}/results/${run_name}.png
-
-# Logger
 logger:
   _target_: rlkit.utils.TensorBoardLogger
   log_dir: ${dir}/logs/${run_name}
-
-# Checkpointer
 checkpointer:
   _target_: rlkit.utils.Checkpointer
   ckpt_path: ${dir}/ckpts
   name: ${run_name}
-
-# LR Scheduler
 lr_scheduler:
   _target_: rlkit.utils.CosineWithLinearWarmupSchedule
-  warmup_epochs: 1
-  initial_lr: 1e-6
-  max_lr: 1e-4
+  warmup_epochs: 2
+  initial_lr: 1.0e-06
+  max_lr: 0.0003
+verbose: true
+continue_: false

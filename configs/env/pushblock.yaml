@@ -1,0 +1,11 @@
+name: "PushBlock"
+
+observation: 
+  type: vector
+  dim: 210
+action:
+  type: discrete
+  dim: 7
+info:
+  batch_dims: 1
+  n_envs: 32

@@ -30,7 +30,7 @@ class PPOCollectorModule:
             self.collector = MultiSyncDataCollector(
                 [self.create_env]*self.config.workers, self.state.policy, 
                 frames_per_batch=self.config.collector_buffer_size, 
-                total_frames=self.config.timesteps, 
+                total_frames=-1, 
                 env_device="cpu", device=self.config.device, storing_device=self.config.storage_device, 
                 reset_at_each_iter=False,
                 update_at_each_batch=False, # Manually update policy weights
@@ -39,7 +39,7 @@ class PPOCollectorModule:
             self.collector = SyncDataCollector(
                 self.create_env, self.state.policy, 
                 frames_per_batch=self.config.collector_buffer_size, 
-                total_frames=self.config.timesteps, 
+                total_frames=-1, 
                 env_device="cpu", device=self.config.device, storing_device=self.config.storage_device,
                 reset_at_each_iter=False,
             )
@@ -136,12 +136,15 @@ class PPOTrainModule:
 
                 if metrics == "stop": 
                     self.buffer.empty()
+                    self.update_lr()
                     return
                 if metrics == "skip": continue
 
                 if self.state.logger: self.state.logger.acc(metrics, mode='ema', beta=0.95)
         self.buffer.empty()
+        self.update_lr()
 
+    def update_lr(self):
         if self.state.lr_scheduler:
             lr = self.state.lr_scheduler.get_last_lr()[0]
             if self.state.logger: self.state.logger.acc({"lr": lr})

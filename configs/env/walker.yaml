@@ -1,0 +1,11 @@
+name: "Walker"
+
+observation: 
+  type: vector
+  dim: 243
+action:
+  type: continuous
+  dim: 39
+info:
+  batch_dims: 1
+  n_envs: 10

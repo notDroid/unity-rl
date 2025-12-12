@@ -1,0 +1,11 @@
+name: "Crawler"
+
+observation: 
+  type: vector
+  dim: 158
+action:
+  type: continuous
+  dim: 20
+info:
+  batch_dims: 1
+  n_envs: 10

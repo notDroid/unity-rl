@@ -2,7 +2,7 @@ run_name: run1
 
 # 1. Environment
 defaults:
-  - env: 3dball
+  - env: pushblock
   - _self_
 
 env:
@@ -15,17 +15,17 @@ algo:
   _target_: ppo.PPORunner
   params:
     epsilon: 0.2
-    entropy_coef: 1e-3
+    entropy_coef: 1e-1
     gamma: 0.99
 
 trainer:
   _target_: rlkit.templates.PPOBasic
   params:
-    generations: 100
-    generation_size: 10_000
+    generations: 200
+    generation_size: 100_000
     slice_len: 128
     n_slices: 256
-    epochs: 2
+    epochs: 10
     minibatch_size: 256
 
     workers: 8
@@ -41,7 +41,7 @@ model:
   params:
     in_features: "${env.observation.dim}"
     out_features: "${env.action.dim}"
-    n_blocks: 1
+    n_blocks: 2
     hidden_dim: 32
 
 # 4. State
@@ -75,6 +75,6 @@ checkpointer:
 # LR Scheduler
 lr_scheduler:
   _target_: rlkit.utils.CosineWithLinearWarmupSchedule
-  warmup_epochs: 1
+  warmup_epochs: 2
   initial_lr: 1e-6
-  max_lr: 1e-4
+  max_lr: 3e-4

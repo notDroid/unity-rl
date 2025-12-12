@@ -1,0 +1,11 @@
+name: "WallJump"
+
+observation: 
+  type: vector
+  dim: 444
+action:
+  type: discrete
+  dim: 54
+info:
+  batch_dims: 1
+  n_envs: 24

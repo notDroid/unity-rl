@@ -1,0 +1,11 @@
+name: "Worm"
+
+observation: 
+  type: vector
+  dim: 64
+action:
+  type: continuous
+  dim: 9
+info:
+  batch_dims: 1
+  n_envs: 10
