@@ -61,3 +61,22 @@ The templates are meant to be used as templates rather than full fledged robust 
 
 ### **3DBall**
 
+<div style="display: flex; justify-content: space-between; gap: 10px;">
+  <img src=".assets/3DBallModel.gif" style="width: 49%; height: auto;">
+  <img src=".assets/3DBallRandom.gif" style="width: 49%; height: auto;">
+</div>
+<br/>
+
+Info
+- observation dim: 8, action dim: 2 (continuous)
+- 12 parallel environments
+- reward: +0.1 survival, -1 failure 
+
+Train Script
+```bash
+python run_experiment.py -cn 3dball_ppo +verbose=True +continue_=False run_name=run1
+```
+Results
+- window = <128 timesteps
+
+![3dball results](experiments/3DBall/ppo/conf1/results/run1.png)
