@@ -61,11 +61,8 @@ The templates are meant to be used as templates rather than full fledged robust 
 
 ### **3DBall**
 
-<div style="display: flex; justify-content: space-between; gap: 10px;">
-  <img src=".assets/3DBallModel.gif" style="width: 49%; height: auto;">
-  <img src=".assets/3DBallRandom.gif" style="width: 49%; height: auto;">
-</div>
-<br/>
+
+<img src=".assets/3DBallModel.gif" alt="3dball model" width="48%" style="margin-right: 10px;"> <img src=".assets/3DBallRandom.gif" alt="3dball random" width="48%">
 
 Info
 - observation dim: 8, action dim: 2 (continuous)
