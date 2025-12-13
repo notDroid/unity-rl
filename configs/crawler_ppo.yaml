@@ -3,7 +3,7 @@ run_name: run1 # Variable per run of the same config
 
 # 1. Environment
 defaults:
-  - env: 3dball
+  - env: crawler
   - _self_
 
 env:
@@ -16,17 +16,17 @@ algo:
   _target_: runners.ppo.PPORunner
   params:
     epsilon: 0.2
-    entropy_coef: 1e-3
+    entropy_coef: 1e-2
     gamma: 0.99
 
 trainer:
   _target_: rlkit.templates.PPOBasic
   params:
-    generations: 100
-    generation_size: 10_000
+    generations: 2000
+    generation_size: 80_000
     slice_len: 128
     n_slices: 256
-    epochs: 2
+    epochs: 10
     minibatch_size: 256
 
     workers: 8
@@ -42,14 +42,14 @@ model:
   params:
     in_features: "${env.observation.dim}"
     out_features: "${env.action.dim}"
-    n_blocks: 1
-    hidden_dim: 32
+    n_blocks: 3
+    hidden_dim: 128
 
 # 4. State
 optimizer:
   _target_: torch.optim.Adam
   params:
-    lr: 1e-6 # Matches initial lr schedule
+    lr: 1e-7 # Matches initial lr schedule
 
 
 ### Utility
@@ -77,6 +77,6 @@ checkpointer:
 # LR Scheduler
 lr_scheduler:
   _target_: rlkit.utils.CosineWithLinearWarmupSchedule
-  warmup_epochs: 1
-  initial_lr: 1e-6
-  max_lr: 1e-4
+  warmup_epochs: 5
+  initial_lr: 1e-7
+  max_lr: 3e-5

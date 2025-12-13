@@ -2,7 +2,7 @@
 # Mac
 .DS_Store
 
-# Checkpoints
+# Checkpoints/Model
 *.ckpt
 *.pt
 

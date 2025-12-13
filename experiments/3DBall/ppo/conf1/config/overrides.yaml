@@ -1,0 +1,3 @@
+- +verbose=True
+- +continue_=False
+- +env.params.path=built_envs/3DBall.app

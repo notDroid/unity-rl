@@ -1,4 +1,5 @@
-run_name: run1
+conf_name: conf1
+run_name: run1 # Variable per run of the same config
 
 # 1. Environment
 defaults:
@@ -12,16 +13,16 @@ env:
 # 2. Algorithm
 algo:
   name: ppo
-  _target_: ppo.PPORunner
+  _target_: runners.ppo.PPORunner
   params:
     epsilon: 0.2
-    entropy_coef: 1e-1
+    entropy_coef: 0.05
     gamma: 0.99
 
 trainer:
   _target_: rlkit.templates.PPOBasic
   params:
-    generations: 200
+    generations: 100
     generation_size: 100_000
     slice_len: 128
     n_slices: 256
@@ -41,7 +42,7 @@ model:
   params:
     in_features: "${env.observation.dim}"
     out_features: "${env.action.dim}"
-    n_blocks: 2
+    n_blocks: 1
     hidden_dim: 32
 
 # 4. State
@@ -54,8 +55,9 @@ optimizer:
 ### Utility
 
 # Change working directory
-dir: experiments/${env.name}/${algo.name}
+dir: experiments/${env.name}/${algo.name}/${conf_name}
 hydra:
+  output_subdir: config
   run:
     dir: ${dir}
 model_path: ${dir}/models/${run_name}.pt

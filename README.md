@@ -1,23 +1,32 @@
 # Unity ML-Agents with TorchRL
 This repo contains examples of solving reinforcement learning scenarios from unity [mlagents](https://github.com/Unity-Technologies/ml-agents) with TorchRL. 
 
-**Projects:**
-
-The projects in this repo are under experiments/ and organized as: [environment]/[experiment]/. 
-- For example "experiments/3DBall/ppo".
+_Insert Video Compilation Here_
 
 ## **Usage**
 
-### **Unity Environments**:
-You can either use the built in unity environments or download them manually. I reccomend using the built in ones at first, but the manual download ones look better.
+**Organization**
+There are 2 main components: 
+1. rlkit
+    - rlkit contains algorithms (like ppo, sac), unity environments (with torchrl transforms), and other utility.
 
-**Manual Download**:
+2. experiment runner
+    - I use hydra to manage configs for (environment, algorithm, config) tuples. 
+    - Experiment results are under experiments/, configs under configs/, and the code for the experiment runner has its entry point at run_experiment.py. 
+```bash
+python run_experiment.py -cn "config_name" +verbose=True +continue_=False run_name="run_name"
+```
+
+### **Unity Environments**
+You can either use the built in unity environments or download them manually. The manual download ones look better and may be necessary if the unity registry is down.
+
+**Manual Download**
 -  [Download](https://docs.unity3d.com/Packages/com.unity.ml-agents@4.0/manual/Installation.html) the repo containing the environments.
 
 - Then open the project in the unity editor (select the Project/ folder from mlagents), select a scene from an environment and build it for whatever platform you're on.
 - Create an env/ folder at the root of this repo and place compiled environments in it.
 
-### **Python Environment**:
+### **Python Environment**
 
 First of all conda is required (something weird about grpcio, wheel won't build) so make sure its properly setup. Then run these at project root:
 
@@ -45,12 +54,10 @@ This package contains reusable resources:
 - utils (checkpointer/logger)
 - models (mlp/cnn)
 
-If you're working on an environment I reccomend copy and pasting the template in and customizing it from there, it is not made for general use.
+The templates are meant to be used as templates rather than full fledged robust algorithms (customize them).
 
-## **TODO List**
-- Set up TaskFile for experiments
-- SAC
-    - Customize loss module: separate entropy and reward heads, separate discount factor for entropy reward.
-- Add rest of the unity environments.
-    - Visual and MARL environments.
-- Set up docker for benchmark training runs.
+
+## **Environments**
+
+### **3DBall**
+
