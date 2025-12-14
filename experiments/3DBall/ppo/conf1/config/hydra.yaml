@@ -113,12 +113,13 @@ hydra:
     - hydra.mode=RUN
     task:
     - +verbose=True
-    - +continue_=False
+    - +continue_=True
     - +env.params.path=built_envs/3DBall.app
+    - run_name=run2
   job:
     name: run_experiment
     chdir: null
-    override_dirname: +continue_=False,+env.params.path=built_envs/3DBall.app,+verbose=True
+    override_dirname: +continue_=True,+env.params.path=built_envs/3DBall.app,+verbose=True,run_name=run2
     id: ???
     num: ???
     config_name: 3dball_ppo

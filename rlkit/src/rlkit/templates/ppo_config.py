@@ -3,7 +3,7 @@ from math import ceil
 
 import torch
 from tensordict.nn import TensorDictModule
-from torchrl.modules import ProbabilisticActor
+from torchrl.modules import ProbabilisticActor, ActorValueOperator, ActorCriticWrapper
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 from torchrl.objectives import ClipPPOLoss
@@ -80,8 +80,7 @@ class PPOTrainConfig:
 # PPO State to Save
 @dataclass
 class PPOState:
-    policy: ProbabilisticActor
-    value: TensorDictModule
+    model: ActorValueOperator | ActorCriticWrapper
     loss_module: ClipPPOLoss
     optimizer: Optimizer
 

@@ -6,12 +6,12 @@ from tensordict.nn.distributions import NormalParamExtractor
 
 from torchrl.objectives import ClipPPOLoss, ValueEstimators
 
-def ContinuousPolicyWrapper(model):
+def ContinuousPolicyWrapper(model, in_keys=["observation"]):
     model = nn.Sequential(
         model,
         NormalParamExtractor()
     )
-    model = TensorDictModule(model, in_keys=["observation"], out_keys=["loc", "scale"])
+    model = TensorDictModule(model, in_keys=in_keys, out_keys=["loc", "scale"])
     
     policy = ProbabilisticActor(
         module=model,  
@@ -27,8 +27,8 @@ def ContinuousPolicyWrapper(model):
 
     return policy
 
-def DiscretePolicyWrapper(model):
-    model = TensorDictModule(model, in_keys=["observation"], out_keys=["logits"])
+def DiscretePolicyWrapper(model, in_keys=["observation"]):
+    model = TensorDictModule(model, in_keys=in_keys, out_keys=["logits"])
     
     policy = ProbabilisticActor(
         module=model,  
@@ -44,15 +44,15 @@ def DiscretePolicyWrapper(model):
 
     return policy
 
-def PolicyWrapper(model, policy_type):
+def PolicyWrapper(model, policy_type, **kwargs):
     if policy_type == 'continuous':
-        return ContinuousPolicyWrapper(model)
+        return ContinuousPolicyWrapper(model, **kwargs)
     if policy_type == 'discrete':
-        return DiscretePolicyWrapper(model)
+        return DiscretePolicyWrapper(model, **kwargs)
     raise KeyError(f"Unknown policy_type: {policy_type}, expected one of [\"continuous\", \"discrete\"]")
 
-def ValueWrapper(model):
-    value = TensorDictModule(model, in_keys=["observation"], out_keys=["state_value"])
+def ValueWrapper(model, in_keys=["observation"]):
+    value = TensorDictModule(model, in_keys=in_keys, out_keys=["state_value"])
     return value
 
 def PPOLossModule(policy, value, epsilon, entropy_coef, gamma, lmbda=0.95, value_coef=1):

@@ -56,6 +56,14 @@ This package contains reusable resources:
 
 The templates are meant to be used as templates rather than full fledged robust algorithms (customize them).
 
+### **TODO**
+
+1. Finish models for vector environments (Crawler, PushBlock, Walker, WallJump, Worm) remaining
+2. Add support for visual environments (GridWorld, Match 3)
+3. Add support for multi agent environments (food collector, soccer twos, striker vs. goalie, co-op pushblock, dungeon escape)
+4. Add SAC
+5. Add support for sparse reward environments (hallway, pryamids)
+6. Add support for variable length observation environments (sorter)
 
 ## **Environments**
 
@@ -77,3 +85,5 @@ Results
 - window = <128 timesteps
 
 ![3dball results](experiments/3DBall/ppo/conf1/results/run1.png)
+
+### **PushBlock**

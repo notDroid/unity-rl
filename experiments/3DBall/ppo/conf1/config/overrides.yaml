@@ -1,3 +1,4 @@
 - +verbose=True
-- +continue_=False
+- +continue_=True
 - +env.params.path=built_envs/3DBall.app
+- run_name=run2

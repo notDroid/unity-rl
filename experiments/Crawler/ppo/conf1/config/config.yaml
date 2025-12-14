@@ -13,7 +13,7 @@ env:
     time_scale: 10
     path: built_envs/Crawler.app
 conf_name: conf1
-run_name: run5
+run_name: run6
 algo:
   name: ppo
   _target_: runners.ppo.PPORunner
@@ -24,7 +24,7 @@ algo:
 trainer:
   _target_: rlkit.templates.PPOBasic
   params:
-    generations: 2000
+    generations: 3000
     generation_size: 80000
     slice_len: 128
     n_slices: 256
@@ -40,7 +40,7 @@ model:
   params:
     in_features: ${env.observation.dim}
     out_features: ${env.action.dim}
-    n_blocks: 3
+    n_blocks: 1
     hidden_dim: 128
 optimizer:
   _target_: torch.optim.Adam

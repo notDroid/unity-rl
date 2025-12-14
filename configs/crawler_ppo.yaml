@@ -22,7 +22,7 @@ algo:
 trainer:
   _target_: rlkit.templates.PPOBasic
   params:
-    generations: 2000
+    generations: 3000
     generation_size: 80_000
     slice_len: 128
     n_slices: 256
@@ -42,7 +42,7 @@ model:
   params:
     in_features: "${env.observation.dim}"
     out_features: "${env.action.dim}"
-    n_blocks: 3
+    n_blocks: 1
     hidden_dim: 128
 
 # 4. State

@@ -5,6 +5,8 @@ from hydra.utils import get_class, instantiate
 from omegaconf import DictConfig, OmegaConf
 from dataclasses import dataclass
 
+from torchrl.modules import ActorValueOperator, ValueOperator, ActorCriticWrapper
+from tensordict.nn import TensorDictModule
 from rlkit.modules import PolicyWrapper, ValueWrapper, PPOLossModule
 from rlkit.templates import PPOBasic, PPOTrainConfig, PPOState, ppo_log_keys
 from rlkit.envs import UnityEnv
@@ -27,6 +29,16 @@ class PPORunner:
         train_config = PPOTrainConfig(**train_config)
 
         ### 1. Model
+
+        # Trunk (if present)
+        in_keys = self.config.env.observation.observation_keys if "observation_keys" in self.config.env.observation else ["observation"]
+        trunk = None
+        if "trunk_config" in self.config:
+            trunk = instantiate(self.config.trunk_config).to(device)
+            if trunk: trunk = TensorDictModule(trunk, in_keys=in_keys, out_keys=["hidden_features"])
+        head_in_keys = in_keys if not trunk else ["hidden_features"]
+
+        # Head
         Model = get_class(self.config.model._target_)
         model_config = todict(self.config.model.params)
 
@@ -35,22 +47,37 @@ class PPORunner:
         if self.config.env.action.type == "continuous":
             policy_config["out_features"] *= 2
         policy_base = Model(**policy_config)
-        policy = PolicyWrapper(policy_base, policy_type=self.config.env.action.type).to(device)
+        policy = PolicyWrapper(policy_base, policy_type=self.config.env.action.type, in_keys=head_in_keys).to(device)
 
         # Value
         value_config = model_config.copy()
         value_config["out_features"] = 1
         value_base = Model(**value_config)
-        value = ValueWrapper(value_base).to(device)
+        value = ValueOperator(value_base, in_keys=head_in_keys).to(device)
+
+        # Actor-Critic
+        model = None
+        if trunk:
+            model = ActorValueOperator(
+                common_operator=trunk,
+                policy_operator=policy,
+                value_operator=value,
+            )
+        else:
+            model = ActorCriticWrapper(
+                policy_operator=policy,
+                value_operator=value,
+            )
 
         if verbose:
-            summary(policy_base, input_size=(1, model_config["in_features"]))
+            try: summary(policy_base, input_size=(1, model_config["in_features"]))
+            except: pass
 
         ### 2. State
 
         # Loss Module
         ppo_algo_config = todict(self.config.algo.params)
-        loss_module = PPOLossModule(policy, value, **ppo_algo_config).to(device)
+        loss_module = PPOLossModule(model.get_policy_operator(), model.get_value_operator(), **ppo_algo_config).to(device)
 
         # Optimizer
         optimizer_config = todict(self.config.optimizer.params)
@@ -80,8 +107,7 @@ class PPORunner:
                 checkpoint = checkpointer.load_progress()
                 if checkpoint:
                     start_generation = int(checkpoint["generation"])
-                    policy.load_state_dict(checkpoint["policy_state_dict"])
-                    value.load_state_dict(checkpoint["value_state_dict"])
+                    model.load_state_dict(checkpoint["model_state_dict"])
                     optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
                     if "scaler_state_dict" in checkpoint:
                         if not scaler: scaler = torch.amp.GradScaler(enabled=(train_config.amp_dtype == torch.float16))
@@ -116,8 +142,7 @@ class PPORunner:
         train_config.start_generation = start_generation
 
         state = PPOState(
-            policy=policy,
-            value=value,
+            model=model,
             optimizer=optimizer,
             loss_module=loss_module,
 

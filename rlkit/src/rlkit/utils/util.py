@@ -1,10 +1,10 @@
 import os
+import math
 import time
 import pandas as pd
-import matplotlib.pyplot as plt
-from matplotlib.ticker import ScalarFormatter
 import seaborn as sns
-import math
+import matplotlib.pyplot as plt
+from matplotlib.animation import ArtistAnimation
 
 class Stopwatch:
     def __init__(self):
@@ -43,3 +43,16 @@ def plot_results(path, logger, log_index=None):
 
     # Save
     plt.savefig(path)
+
+def create_animation(imgs):
+    fig, ax = plt.subplots()
+    ax.axis('off')
+    frames = []
+
+    for img in imgs:        
+        frame = ax.imshow(img, animated=True)
+        frames.append([frame])
+
+    ani = ArtistAnimation(fig, frames, interval=50, blit=True)
+    plt.close()
+    return ani

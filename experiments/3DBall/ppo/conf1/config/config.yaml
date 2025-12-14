@@ -13,10 +13,10 @@ env:
     time_scale: 10
     path: built_envs/3DBall.app
 conf_name: conf1
-run_name: run1
+run_name: run2
 algo:
   name: ppo
-  _target_: ppo.PPORunner
+  _target_: runners.ppo.PPORunner
   params:
     epsilon: 0.2
     entropy_coef: 0.001
@@ -25,12 +25,12 @@ trainer:
   _target_: rlkit.templates.PPOBasic
   params:
     generations: 100
-    generation_size: 10000
-    slice_len: 128
-    n_slices: 256
+    generation_size: 12000
+    slice_len: 100
+    n_slices: 120
     epochs: 2
     minibatch_size: 256
-    workers: 8
+    workers: 10
     env_batch_dim: 1
     kl_soft_clip: 0.02
     early_stop_threshold: 32
@@ -62,4 +62,4 @@ lr_scheduler:
   initial_lr: 1.0e-06
   max_lr: 0.0001
 verbose: true
-continue_: false
+continue_: true

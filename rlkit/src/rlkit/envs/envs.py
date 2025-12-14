@@ -4,6 +4,7 @@ from .threedball import create_base_3dball_env
 from .walker import create_base_walker_env
 from .walljump import create_base_walljump_env
 from .worm import create_base_worm_env
+from.gridworld import create_base_gridworld_env
 from .env_utils import make_env
 
 env_fn_map = {
@@ -13,6 +14,7 @@ env_fn_map = {
     "Walker": create_base_walker_env,
     "WallJump": create_base_walljump_env,
     "Worm": create_base_worm_env,
+    "GridWorld": create_base_gridworld_env,
 }
 
 registered_env_list = list(env_fn_map.keys())

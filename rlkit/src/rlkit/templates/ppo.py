@@ -28,7 +28,7 @@ class PPOCollectorModule:
         # -------------- Collector Utility --------------
         if self.config.workers > 1:
             self.collector = MultiSyncDataCollector(
-                [self.create_env]*self.config.workers, self.state.policy, 
+                [self.create_env]*self.config.workers, self.state.model.get_policy_operator(), 
                 frames_per_batch=self.config.collector_buffer_size, 
                 total_frames=-1, 
                 env_device="cpu", device=self.config.device, storing_device=self.config.storage_device, 
@@ -37,7 +37,7 @@ class PPOCollectorModule:
             )
         else:
             self.collector = SyncDataCollector(
-                self.create_env, self.state.policy, 
+                self.create_env, self.state.model.get_policy_operator(), 
                 frames_per_batch=self.config.collector_buffer_size, 
                 total_frames=-1, 
                 env_device="cpu", device=self.config.device, storing_device=self.config.storage_device,
@@ -60,7 +60,7 @@ class PPOCollectorModule:
 
     def step(self):
         if self.config.workers > 1: self.collector.update_policy_weights_() # Update weights manually
-        self.state.policy.eval(); self.state.value.eval()
+        self.state.model.eval()
         self.buffer.empty()
 
         # Buffer in memory then move to memory mapped storage in loop
@@ -126,7 +126,7 @@ class PPOTrainModule:
         }
     
     def train(self):
-        self.state.policy.train(); self.state.value.train()
+        self.state.model.train()
         self.early_stop = 0
 
         for epoch in range(self.config.epochs):
@@ -161,13 +161,12 @@ class PPOAdvantageModule:
         if not self.state.metric_module: self.state.metric_module = SimpleMetricModule(mode="approx")
 
     def step(self):    
-        self.state.policy.eval(); self.state.value.eval()
+        self.state.model.eval()
         self.train_module.buffer.empty()
         self.metrics = dict()
 
         for j, batch in enumerate(self.collect_module.buffer):
             batch = batch.to(self.config.device)
-        
             with torch.no_grad():
                 self.state.loss_module.value_estimator(batch)
                 metrics = self.state.metric_module(batch)
@@ -245,8 +244,7 @@ class PPOBasic:
     def _ckpt_step(self, gen, metrics):
         state_obj = {
             "generation": gen + 1,
-            "policy_state_dict": self.state.policy.state_dict(),
-            "value_state_dict": self.state.value.state_dict(),
+            "model_state_dict": self.state.model.state_dict(),
             "optimizer_state_dict": self.state.optimizer.state_dict(),
             "scaler_state_dict": self.state.scaler.state_dict(),
         }
@@ -268,13 +266,12 @@ class PPOBasic:
         except: pass
         if model_path: 
             state_obj = {
-                "policy_state_dict": self.state.policy.state_dict(),
-                "value_state_dict": self.state.value.state_dict(),
+                "model_state_dict": self.state.model.state_dict(),
             }
             atomic_torch_save(state_obj, path=model_path)
 
     def model(self): 
-        return self.state.policy, self.state.value
+        return self.state.model
     
     def history(self):
         return self.state.logger.dataframe()
