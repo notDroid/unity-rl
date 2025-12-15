@@ -54,7 +54,7 @@ This package contains reusable resources:
 - utils (checkpointer/logger)
 - models (mlp/cnn)
 
-The templates are meant to be used as templates rather than full fledged robust algorithms (customize them).
+The training templates are meant to be used as templates rather than robust algorithms (customize them).
 
 ### **TODO**
 
@@ -73,7 +73,7 @@ The templates are meant to be used as templates rather than full fledged robust 
 <img src=".assets/3DBallModel.gif" alt="3dball model" width="48%" style="margin-right: 10px;"> <img src=".assets/3DBallRandom.gif" alt="3dball random" width="48%">
 
 Info
-- observation dim: 8, action dim: 2 (continuous)
+- vector observation of dim: 8, vector action of dim: 2 (continuous)
 - 12 parallel environments
 - reward: +0.1 survival, -1 failure 
 
@@ -82,8 +82,25 @@ Train Script
 python run_experiment.py -cn 3dball_ppo +verbose=True +continue_=False run_name=run1
 ```
 Results
-- window = <128 timesteps
+- avg return with window 1000: 100
 
 ![3dball results](experiments/3DBall/ppo/conf1/results/run1.png)
 
 ### **PushBlock**
+
+<img src=".assets/PushBlockModel.gif" alt="pushblock model" width="48%" style="margin-right: 10px;"> <img src=".assets/PushBlockRandom.gif" alt="pushblock random" width="48%">
+
+Info:
+- vector observation of dim 210, vector action of dim 7
+- 32 parallel environments
+- reward -0.0025 step, +1 goal
+
+Train Script
+```bash
+python run_experiment.py -cn pushblock_ppo +verbose=True +continue_=False run_name=run1
+```
+
+Results
+- avg return with window 1000: 4.8
+
+![3dball results](experiments/PushBlock/ppo/conf1/results/run1.png)

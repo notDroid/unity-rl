@@ -115,10 +115,11 @@ hydra:
     - +verbose=True
     - +continue_=False
     - +env.params.path=built_envs/PushBlock.app
+    - run_name=run1
   job:
     name: run_experiment
     chdir: null
-    override_dirname: +continue_=False,+env.params.path=built_envs/PushBlock.app,+verbose=True
+    override_dirname: +continue_=False,+env.params.path=built_envs/PushBlock.app,+verbose=True,run_name=run1
     id: ???
     num: ???
     config_name: pushblock_ppo

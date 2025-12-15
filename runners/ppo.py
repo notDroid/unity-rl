@@ -15,12 +15,57 @@ from torchinfo import summary
 
 todict = lambda x: OmegaConf.to_container(x, resolve=True)
 
+def make_ppo_agent(config, verbose=False, device="cpu"):
+     # Trunk (if present)
+    in_keys = config.env.observation.observation_keys if "observation_keys" in config.env.observation else ["observation"]
+    trunk = None
+    if "trunk_config" in config:
+        trunk = instantiate(config.trunk_config).to(device)
+        if trunk: trunk = TensorDictModule(trunk, in_keys=in_keys, out_keys=["hidden_features"])
+    head_in_keys = in_keys if not trunk else ["hidden_features"]
+
+    # Head
+    Model = get_class(config.model._target_)
+    model_config = todict(config.model.params)
+
+    # Policy
+    policy_config = model_config.copy()
+    if config.env.action.type == "continuous":
+        policy_config["out_features"] *= 2
+    policy_base = Model(**policy_config)
+    policy = PolicyWrapper(policy_base, policy_type=config.env.action.type, in_keys=head_in_keys).to(device)
+
+    # Value
+    value_config = model_config.copy()
+    value_config["out_features"] = 1
+    value_base = Model(**value_config)
+    value = ValueOperator(value_base, in_keys=head_in_keys).to(device)
+
+    # Actor-Critic
+    model = None
+    if trunk:
+        model = ActorValueOperator(
+            common_operator=trunk,
+            policy_operator=policy,
+            value_operator=value,
+        )
+    else:
+        model = ActorCriticWrapper(
+            policy_operator=policy,
+            value_operator=value,
+        )
+
+    if verbose:
+        try: summary(policy_base, input_size=(1, model_config["in_features"]))
+        except: pass
+    
+    return model
+
 class PPORunner:
     def __init__(self, config: DictConfig):
         self.config = config
 
     def run(self, verbose=False, continue_=True, device="cpu"):
-        
         # Environment and Train Config
         env_config = todict(self.config.env.params)
         create_env = lambda: UnityEnv(self.config.env.name, **env_config)
@@ -29,49 +74,7 @@ class PPORunner:
         train_config = PPOTrainConfig(**train_config)
 
         ### 1. Model
-
-        # Trunk (if present)
-        in_keys = self.config.env.observation.observation_keys if "observation_keys" in self.config.env.observation else ["observation"]
-        trunk = None
-        if "trunk_config" in self.config:
-            trunk = instantiate(self.config.trunk_config).to(device)
-            if trunk: trunk = TensorDictModule(trunk, in_keys=in_keys, out_keys=["hidden_features"])
-        head_in_keys = in_keys if not trunk else ["hidden_features"]
-
-        # Head
-        Model = get_class(self.config.model._target_)
-        model_config = todict(self.config.model.params)
-
-        # Policy
-        policy_config = model_config.copy()
-        if self.config.env.action.type == "continuous":
-            policy_config["out_features"] *= 2
-        policy_base = Model(**policy_config)
-        policy = PolicyWrapper(policy_base, policy_type=self.config.env.action.type, in_keys=head_in_keys).to(device)
-
-        # Value
-        value_config = model_config.copy()
-        value_config["out_features"] = 1
-        value_base = Model(**value_config)
-        value = ValueOperator(value_base, in_keys=head_in_keys).to(device)
-
-        # Actor-Critic
-        model = None
-        if trunk:
-            model = ActorValueOperator(
-                common_operator=trunk,
-                policy_operator=policy,
-                value_operator=value,
-            )
-        else:
-            model = ActorCriticWrapper(
-                policy_operator=policy,
-                value_operator=value,
-            )
-
-        if verbose:
-            try: summary(policy_base, input_size=(1, model_config["in_features"]))
-            except: pass
+        model = make_ppo_agent(self.config, device)
 
         ### 2. State
 

@@ -16,7 +16,7 @@ conf_name: conf1
 run_name: run1
 algo:
   name: ppo
-  _target_: ppo.PPORunner
+  _target_: runners.ppo.PPORunner
   params:
     epsilon: 0.2
     entropy_coef: 0.05
@@ -24,13 +24,13 @@ algo:
 trainer:
   _target_: rlkit.templates.PPOBasic
   params:
-    generations: 100
-    generation_size: 100000
+    generations: 500
+    generation_size: 96000
     slice_len: 128
     n_slices: 256
     epochs: 10
     minibatch_size: 256
-    workers: 8
+    workers: 10
     env_batch_dim: 1
     kl_soft_clip: 0.02
     early_stop_threshold: 32
@@ -41,7 +41,7 @@ model:
     in_features: ${env.observation.dim}
     out_features: ${env.action.dim}
     n_blocks: 1
-    hidden_dim: 32
+    hidden_dim: 64
 optimizer:
   _target_: torch.optim.Adam
   params:
