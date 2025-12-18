@@ -19,12 +19,13 @@ class Stopwatch:
 def round_up(x: float | int, y: int = 1):
     return ((x + y - 1) // y) * y
 
-def plot_results(path, logger, log_index=None):
+def plot_results(logger, path=None, log_index=None, ewma_span=0):
     # Get dataframe
     df = logger.dataframe()
     if log_index:
         df = df.set_index(log_index)
     df.index = pd.to_numeric(df.index, errors='coerce')
+    if ewma_span > 0: df_ewma = df.ewm(span=ewma_span).mean()
 
     sns.set_theme(style="ticks", font_scale=1.1, palette="tab20")
     rows = (len(df.columns) + 3) // 4
@@ -38,11 +39,20 @@ def plot_results(path, logger, log_index=None):
         legend=True,        
         linewidth=3,
         title="Experiment Results",
+        alpha=0.25 if ewma_span>0 else 1.0
     )
     plt.tight_layout()
 
+    # EWMA
+    if ewma_span > 0:
+        for col, ax in zip(df.columns, axes.flatten()):
+            # Grab the color of the semi-transparent line so the trend matches
+            plot_color = ax.get_lines()[0].get_color()
+            # Plot the EWMA on top
+            ax.plot(df.index, df_ewma[col], color=plot_color, linewidth=3)
+
     # Save
-    plt.savefig(path)
+    if path: plt.savefig(path)
 
 def create_animation(imgs):
     fig, ax = plt.subplots()

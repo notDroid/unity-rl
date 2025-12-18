@@ -6,6 +6,7 @@ _Insert Video Compilation Here_
 ## **Usage**
 
 **Organization**
+
 There are 2 main components: 
 1. rlkit
     - rlkit contains algorithms (like ppo, sac), unity environments (with torchrl transforms), and other utility.

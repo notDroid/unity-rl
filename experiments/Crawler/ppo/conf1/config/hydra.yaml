@@ -113,13 +113,13 @@ hydra:
     - hydra.mode=RUN
     task:
     - +verbose=True
-    - +continue_=False
+    - +continue_=True
     - +env.params.path=built_envs/Crawler.app
-    - run_name=run6
+    - run_name=run9
   job:
     name: run_experiment
     chdir: null
-    override_dirname: +continue_=False,+env.params.path=built_envs/Crawler.app,+verbose=True,run_name=run6
+    override_dirname: +continue_=True,+env.params.path=built_envs/Crawler.app,+verbose=True,run_name=run9
     id: ???
     num: ???
     config_name: crawler_ppo

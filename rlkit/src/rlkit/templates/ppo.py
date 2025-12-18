@@ -165,8 +165,10 @@ class PPOAdvantageModule:
         self.train_module.buffer.empty()
         self.metrics = dict()
 
+        # print(self.collect_module.buffer)
         for j, batch in enumerate(self.collect_module.buffer):
             batch = batch.to(self.config.device)
+            # print(batch)
             with torch.no_grad():
                 self.state.loss_module.value_estimator(batch)
                 metrics = self.state.metric_module(batch)

@@ -53,8 +53,8 @@ class SimpleMetricModule:
         if mode not in self.mode_map: raise KeyError(f"Invalid mode: \"{mode}\". Valid modes: {list(self.mode_map.keys())}")
         self.entropy_fn = self.mode_map[mode]
 
-    def __call__(self, data):
-        traj_data = split_trajectories(data)
+    def __call__(self, data, **kwargs):
+        traj_data = split_trajectories(data, **kwargs)
         args = {
             "data": data,
             "traj_data": traj_data,

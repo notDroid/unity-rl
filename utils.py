@@ -11,7 +11,6 @@ def ppo_load_config(directory_path, save_name, config_file="config/config.yaml",
     # Load config
     config_path = os.path.join(directory_path, config_file)
     config = OmegaConf.load(config_path)
-    OmegaConf.resolve(config)
 
     # Get model
     model = make_ppo_agent(config)

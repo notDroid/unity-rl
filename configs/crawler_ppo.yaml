@@ -22,15 +22,15 @@ algo:
 trainer:
   _target_: rlkit.templates.PPOBasic
   params:
-    generations: 3000
+    generations: 5000
     generation_size: 80_000
-    slice_len: 128
-    n_slices: 256
+    slice_len: 1000
+    n_slices: 20
     epochs: 10
-    minibatch_size: 256
+    minibatch_size: 1024
 
     workers: 8
-    env_batch_dim: 1
+    env_batch_dim: ${env.info.batch_dims}
 
     kl_soft_clip: 0.02
     early_stop_threshold: 32
@@ -79,4 +79,4 @@ lr_scheduler:
   _target_: rlkit.utils.CosineWithLinearWarmupSchedule
   warmup_epochs: 5
   initial_lr: 1e-7
-  max_lr: 3e-5
+  max_lr: 1e-5

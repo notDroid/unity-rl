@@ -13,7 +13,7 @@ env:
     time_scale: 10
     path: built_envs/Crawler.app
 conf_name: conf1
-run_name: run6
+run_name: run9
 algo:
   name: ppo
   _target_: runners.ppo.PPORunner
@@ -24,14 +24,14 @@ algo:
 trainer:
   _target_: rlkit.templates.PPOBasic
   params:
-    generations: 3000
+    generations: 5000
     generation_size: 80000
-    slice_len: 128
-    n_slices: 256
+    slice_len: 1000
+    n_slices: 20
     epochs: 10
-    minibatch_size: 256
+    minibatch_size: 1024
     workers: 8
-    env_batch_dim: 1
+    env_batch_dim: ${env.info.batch_dims}
     kl_soft_clip: 0.02
     early_stop_threshold: 32
     kl_hard_clip: 0.05
@@ -60,6 +60,6 @@ lr_scheduler:
   _target_: rlkit.utils.CosineWithLinearWarmupSchedule
   warmup_epochs: 5
   initial_lr: 1.0e-07
-  max_lr: 3.0e-05
+  max_lr: 1.0e-05
 verbose: true
-continue_: false
+continue_: true
