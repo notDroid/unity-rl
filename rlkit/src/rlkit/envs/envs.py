@@ -19,6 +19,19 @@ env_fn_map = {
 
 registered_env_list = list(env_fn_map.keys())
 
+"""
+Top-level factory function for creating Unity Environments.
+
+Args:
+    name: The key to look up the environment function in env_fn_map (e.g. "Crawler": create_base_crawler_env).
+    path: Path to the Unity executable.
+    graphics: Whether to render graphics.
+    time_scale: Speed of the simulation.
+    **kwargs: Additional arguments passed to the unity environment (passed to UnityMLAgentsEnv).
+    
+Returns:
+    An instantiated TorchRL environment.
+"""
 def UnityEnv(name, path=None, graphics=False, time_scale=1.0, **kwargs):
     if name not in env_fn_map: 
         print(f"Invalid Environment \"{name}\". Expected one of: {registered_env_list}")

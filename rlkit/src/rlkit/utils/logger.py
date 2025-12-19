@@ -7,6 +7,7 @@ import shutil
 
 from torch.utils.tensorboard import SummaryWriter
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
+from huggingface_hub import HfApi, snapshot_download
 
 def atomic_replace_df(df, path):
     with tempfile.NamedTemporaryFile(delete=False, dir=os.path.dirname(path)) as tmp:
@@ -162,6 +163,9 @@ class LoggerBase:
     
     def last(self):
         return self.row
+    
+    def reset(self): raise NotImplementedError("Incorrect Usage")
+    def revert(self, key=None, value=None): raise NotImplementedError("Incorrect Usage")
     
 class CSVLogger(LoggerBase):
     '''
@@ -333,5 +337,56 @@ class TensorBoardLogger(LoggerBase):
             for k, v in row.items():
                 if pd.notna(v):
                     self.writer.add_scalar(k, v, i)
+
+class HFTBLogger(TensorBoardLogger):
+    '''
+    Log to tensorboard at local log_dir and sync with huggingface
+
+    Usage:
+        - revert(), to latest index or specified (key, value)
+        - reset(), reset log dir
+        - log use next() + log ops
+
+        NEW:
+        - sync_from_hub, get logs from hf
+        - sync_to_hub, send logs to hf
+    '''
+    def __init__(self, keys, log_dir, repo_id, repo_subfolder):
+        super().__init__(keys, log_dir)
+
+        self.repo_id = repo_id
+        self.repo_subfolder = repo_subfolder
+        self.api = HfApi()
+
+    def sync_from_hub(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            snapshot_download(
+                repo_id=self.repo_id,
+                repo_type="model",
+                local_dir=temp_dir,
+                local_dir_use_symlinks=False,
+                allow_patterns=f"{self.repo_subfolder}/**"  # Download only subfolder contents
+            )
+            subfolder_path = os.path.join(temp_dir, self.repo_subfolder)
+            if os.path.exists(subfolder_path):
+                # Reset log_dir and tensorboard
+                super().reset()
+
+                # Copy contents to self.log_dir
+                for item in os.listdir(subfolder_path):
+                    shutil.move(os.path.join(subfolder_path, item), self.log_dir)
+
+                # Update tensorboard writer
+                super().revert()
+            else:
+                print(f"Subfolder '{self.repo_subfolder}' not found in repo.")
+    
+    def sync_to_hub(self):
+        self.api.upload_folder(
+            folder_path=self.log_dir,
+            path_in_repo=self.repo_subfolder,
+            repo_id=self.repo_id,
+            commit_message=f"Log sync: Step {len(self.df)}",
+        )
 
     

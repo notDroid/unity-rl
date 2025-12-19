@@ -157,8 +157,8 @@ class PPORunner:
         )
 
         ### 3. Run PPO
-        ppo = PPOBasic(create_env, train_config, state)
-        ppo.run(verbose)
+        ppo = PPOBasic(create_env=create_env, ppo_config=train_config, ppo_state=state, verbose=verbose)
+        # ppo.run()
 
         # 4. Save Results
         model_path = None

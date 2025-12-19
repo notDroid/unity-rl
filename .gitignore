@@ -13,6 +13,7 @@ temp/
 # Ignore logs
 out.txt
 outputs/
+logs/
 ###
 
 # Byte-compiled / optimized / DLL files

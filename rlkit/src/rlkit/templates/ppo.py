@@ -195,11 +195,11 @@ class PPOAdvantageModule:
         return final_metrics
 
 class PPOBasic:
-    def __init__(self, create_env: callable, ppo_config: PPOTrainConfig, ppo_state: PPOState):
+    def __init__(self, create_env: callable, ppo_config: PPOTrainConfig, ppo_state: PPOState, verbose=False):
         self.create_env = create_env
         self.config = ppo_config
         self.state = ppo_state
-        self.verbose = False
+        self.verbose = verbose
 
         # Stateless Helper Modules
         self.collect_module = PPOCollectorModule(create_env, ppo_config, ppo_state)
@@ -278,7 +278,6 @@ class PPOBasic:
     def history(self):
         return self.state.logger.dataframe()
     
-    def run(self, verbose=False):
-        self.verbose = verbose
+    def run(self):
         for gen in range(self.config.start_generation, self.config.generations):
             self.step(gen)
