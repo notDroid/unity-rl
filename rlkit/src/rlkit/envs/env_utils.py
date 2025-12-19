@@ -31,8 +31,8 @@ def create_unity_env(path=None, registered_name=None, graphics=False, **kwargs):
         try:
             env = _create_unity_env(path, registered_name, graphics, **kwargs)
             break
-        except: pass
-        if i + 1 == ATTEMPTS: raise RuntimeError("Failed to load environment, call _create_unity_env() directly to find issue")
+        except Exception as e:
+            if i + 1 == ATTEMPTS: raise RuntimeError(f"Failed to load environment: {e}")
 
     return env
 

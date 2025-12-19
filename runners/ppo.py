@@ -71,6 +71,7 @@ class PPORunner:
         create_env = lambda: UnityEnv(self.config.env.name, **env_config)
 
         train_config = todict(self.config.trainer.params)
+        train_config['device'] = device
         train_config = PPOTrainConfig(**train_config)
 
         ### 1. Model
@@ -145,7 +146,7 @@ class PPORunner:
         train_config.start_generation = start_generation
 
         state = PPOState(
-            model=model,
+            model=model.to(device),
             optimizer=optimizer,
             loss_module=loss_module,
 
@@ -158,7 +159,7 @@ class PPORunner:
 
         ### 3. Run PPO
         ppo = PPOBasic(create_env=create_env, ppo_config=train_config, ppo_state=state, verbose=verbose)
-        # ppo.run()
+        ppo.run()
 
         # 4. Save Results
         model_path = None

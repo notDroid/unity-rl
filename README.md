@@ -47,7 +47,7 @@ python -m pip install mlagents==1.1.0
 python -m pip install numpy==2.2.6
 
 # Install toolkit
-python -m pip install pandas matplotlib ipykernel hydra-core seaborn
+python -m pip install pandas matplotlib ipykernel hydra-core seaborn huggingface_hub torchinfo
 python -m pip install torch torchrl 
 python -m pip install -e rlkit
 ```
@@ -71,7 +71,7 @@ The training templates are meant to be used as templates rather than robust algo
 5. Add support for sparse reward environments (hallway, pryamids)
 6. Add support for variable length observation environments (sorter)
 
-- Add hugging face integration
+- Add Docker support
 - Add evaluation function
 - Train WallJump
 
