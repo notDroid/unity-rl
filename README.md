@@ -96,7 +96,7 @@ env = UnityEnv(name='3DBall')
   <img src="experiments/3DBall/ppo/conf1/results/run1.png" alt="3dball results" width="60%">
 </p>
 
-- avg return with window 1000: 100
+- episode length = timesteps
 
 Train:
 ```bash
@@ -126,8 +126,7 @@ env = UnityEnv(name='PushBlock')
   <img src="experiments/PushBlock/ppo/conf1/results/run1.png" alt="pushblock results" width="60%">
 </p>
 
-- avg return with window 1000: 4.5
-
+- avg return: 4.5, avg episode length: 40
 
 Train:
 ```bash

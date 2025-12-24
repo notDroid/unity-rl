@@ -4,6 +4,7 @@ run_name: run1 # Variable per run of the same config
 # 1. Environment
 defaults:
   - env: walljump
+  - info
   - _self_
 
 env:
@@ -22,8 +23,8 @@ algo:
 trainer:
   _target_: rlkit.templates.PPOBasic
   params:
-    generations: 3000
-    generation_size: 48_000
+    generations: 5000
+    generation_size: 96_000
     slice_len: 200
     n_slices: 256
     epochs: 10
@@ -65,18 +66,21 @@ results_path: ${dir}/results/${run_name}.png
 
 # Logger
 logger:
-  _target_: rlkit.utils.TensorBoardLogger
+  _target_: rlkit.utils.HFTBLogger
   log_dir: ${dir}/logs/${run_name}
+  repo_id: ${repo_id}
+  repo_subfolder: ${dir}/logs/${run_name}
 
 # Checkpointer
 checkpointer:
-  _target_: rlkit.utils.Checkpointer
+  _target_: rlkit.utils.HFCheckpointer
   ckpt_path: ${dir}/ckpts
   name: ${run_name}
+  repo_id: ${repo_id}
 
 # LR Scheduler
 lr_scheduler:
   _target_: rlkit.utils.CosineWithLinearWarmupSchedule
   warmup_epochs: 5
   initial_lr: 1e-7
-  max_lr: 1e-5
+  max_lr: 1e-4

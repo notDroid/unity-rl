@@ -2,6 +2,7 @@ import os
 import numpy as np
 import tempfile
 import torch
+from .util import upload_to_hf_hub, download_from_hf_hub
 
 def atomic_torch_save(state_obj, path, **kwargs):
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -285,3 +286,22 @@ class MultiVersionCheckpointer:
             state_obj = {key: state_obj[key] for key in keys}
 
         atomic_torch_save(state_obj, os.path.join(model_path, f"{self.name}.pt"))
+
+class HFCheckpointer(Checkpointer):
+    '''
+    Checkpoints training progress using HuggingFace Hub.
+    Saves latest checkpoint.
+    
+    Args:
+        - repo_id, ckpt_path, name, (optional) metric_key
+    '''
+
+    def __init__(self, repo_id, ckpt_path, name, metric_key=None):
+        super().__init__(ckpt_path, name, metric_key)
+        self.repo_id = repo_id
+
+    def sync_to_hub(self, **kwargs):
+        upload_to_hf_hub(self.latest_path, self.repo_id, self.latest_path, **kwargs)
+
+    def sync_from_hub(self, **kwargs):
+        download_from_hf_hub(self.repo_id, self.latest_path, self.latest_path, **kwargs)

@@ -9,6 +9,8 @@ from rlkit.utils import download_from_hf_hub, upload_to_hf_hub
 
 todict = lambda x: OmegaConf.to_container(x, resolve=True)
 
+DEFAULT_REPO_ID = 'notnotDroid/unity-rl'
+
 def ppo_load_config(directory_path, save_name=None, config_file="config/config.yaml", **kwargs):
     # Load config
     config_path = os.path.join(directory_path, config_file)
@@ -20,26 +22,26 @@ def ppo_load_config(directory_path, save_name=None, config_file="config/config.y
     # Load Params
     if save_name:
         save_path = os.path.join(directory_path, save_name)
-        state_obj = torch.load(save_path, **kwargs)
+        state_obj = torch.load(save_path, map_location=torch.device('cpu'), **kwargs)
         model.load_state_dict(state_obj["model_state_dict"])
 
     return model
     
-def ppo_upload_model(directory_path, save_name, config_file="config/config.yaml", repo_id='notnotDroid/unity-rl', **kwargs):
+def ppo_upload_model(directory_path, save_name, config_file="config/config.yaml", repo_id=DEFAULT_REPO_ID, **kwargs):
     config_path = os.path.join(directory_path, config_file)
     save_path = os.path.join(directory_path, save_name)
 
     upload_to_hf_hub(local_path=config_path, repo_id=repo_id, remote_path=config_path, **kwargs)
     upload_to_hf_hub(local_path=save_path, repo_id=repo_id, remote_path=save_path, **kwargs)
 
-def ppo_download_model(directory_path, save_name, config_file="config/config.yaml", repo_id='notnotDroid/unity-rl', **kwargs):
+def ppo_download_model(directory_path, save_name, config_file="config/config.yaml", repo_id=DEFAULT_REPO_ID, **kwargs):
     config_path = os.path.join(directory_path, config_file)
     save_path = os.path.join(directory_path, save_name)
 
     download_from_hf_hub(local_path=config_path, repo_id=repo_id, remote_path=config_path, **kwargs)
     download_from_hf_hub(local_path=save_path, repo_id=repo_id, remote_path=save_path, **kwargs)
 
-def PPOAgent(environment_name, config_name, run_name, save_type='models', config_file="config/config.yaml", repo_id='notnotDroid/unity-rl', **kwargs):
+def PPOAgent(environment_name, config_name, run_name, save_type='models', config_file="config/config.yaml", repo_id=DEFAULT_REPO_ID, **kwargs):
     directory_path = os.path.join("experiments", environment_name, 'ppo', config_name)
 
     if save_type == 'models': suffix = '.pt'

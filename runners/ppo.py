@@ -10,7 +10,7 @@ from tensordict.nn import TensorDictModule
 from rlkit.modules import PolicyWrapper, ValueWrapper, PPOLossModule
 from rlkit.templates import PPOBasic, PPOTrainConfig, PPOState, ppo_log_keys
 from rlkit.envs import UnityEnv
-from rlkit.utils import plot_results
+from rlkit.utils import plot_results, upload_to_hf_hub
 from torchinfo import summary
 
 todict = lambda x: OmegaConf.to_container(x, resolve=True)
@@ -59,7 +59,7 @@ def make_ppo_agent(config, verbose=False, device="cpu"):
         try: summary(policy_base, input_size=(1, model_config["in_features"]))
         except: pass
     
-    return model
+    return model.to(device)
 
 class PPORunner:
     def __init__(self, config: DictConfig):
@@ -146,7 +146,7 @@ class PPORunner:
         train_config.start_generation = start_generation
 
         state = PPOState(
-            model=model.to(device),
+            model=model,
             optimizer=optimizer,
             loss_module=loss_module,
 
@@ -156,17 +156,34 @@ class PPORunner:
             metric_module=metric_module,
             lr_scheduler=lr_scheduler,
         )
+        sync_interval = self.config.get("hf_sync_interval", None)
+        sync_interval = None if sync_interval == 0 else sync_interval
+        repo_id = self.config.get("repo_id", 'notnotDroid/unity-rl')
+        if sync_interval:
+            config_path = os.path.join(self.config.dir, "config", "config.yaml")
+            upload_to_hf_hub(config_path, repo_id, config_path, commit_message="config upload")
+            
 
         ### 3. Run PPO
         ppo = PPOBasic(create_env=create_env, ppo_config=train_config, ppo_state=state, verbose=verbose)
-        ppo.run()
+        # ppo.run()
+        for gen in range(ppo.config.start_generation, ppo.config.generations):
+            ppo.step(gen)
+            if sync_interval is not None and (gen % sync_interval == 0):
+                if logger: logger.sync_to_hub()
+                if checkpointer: checkpointer.sync_to_hub()
+        
 
         # 4. Save Results
         model_path = None
-        if "model_path" in self.config: 
-            model_path = self.config.model_path
+        model_path = self.config.get("model_path", None)
+        if model_path: 
             os.makedirs(os.path.dirname(model_path), exist_ok=True)
         ppo.close(model_path)
+
+        if sync_interval and model_path:
+            upload_to_hf_hub(local_path=model_path, repo_id=repo_id, remote_path=model_path, commit_message="model upload")
+        if sync_interval and logger: logger.sync_to_hub()
         
         if "results_path" in self.config and logger:
             results_path = self.config.results_path
