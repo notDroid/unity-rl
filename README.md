@@ -1,7 +1,60 @@
 # Unity ML-Agents with TorchRL
 This repo contains examples of solving reinforcement learning scenarios from unity [mlagents](https://github.com/Unity-Technologies/ml-agents) with TorchRL. 
 
-_Insert Video Compilation Here_
+<p align="center">
+  <img src="assets/3DBallModel.gif" alt="Row 1 Col 1" width="32%" style="margin-right: 0px; margin-bottom: 0px;">
+  <img src="assets/PushBlockModel.gif" alt="Row 1 Col 2" width="32%" style="margin-right: 0px; margin-bottom: 0px;">
+  <img src="assets/WallJumpModel.gif" alt="Row 1 Col 3" width="32%" style="margin-bottom: 0px;">
+  <br>
+  <img src="assets/CrawlerModel.gif" alt="Row 2 Col 1" width="32%" style="margin-right: 0px;">
+  <img src="assets/WormModel.gif" alt="Row 2 Col 2" width="32%" style="margin-right: 0px;">
+  <img src="assets/WalkerModel.gif" alt="Row 2 Col 3" width="32%">
+</p>
+
+## **Quickstart**
+
+**1. Installation**
+
+Clone the repo and run the auto-install script. This handles the complex dependency conflicts (mlagents vs numpy) for you. *Requires Conda.*
+
+```bash
+git clone https://github.com/notDroid/unity-rl.git
+cd unity-rl
+
+bash install.sh
+
+conda activate mlagents
+```
+**2. CLI Usage** 
+
+You can list available models and run them immediately from the command line.
+
+```bash
+# List all available environments and models
+python play.py ls
+
+# Run a specific environment (auto-downloads model from HF)
+python play.py 3DBall ppo conf1 run1 --graphics
+```
+
+**3. Python Usage** 
+
+Minimal example to load an agent and run a rollout:
+
+```python
+from utils import PPOAgent
+from rlkit.envs import UnityEnv
+
+# 1. Load Agent (Auto-downloads from Hugging Face)
+agent = PPOAgent('Crawler', 'conf1', 'run9')
+policy = agent.get_policy_operator()
+
+# 2. Run Environment (Auto-downloads from mlagents registry)
+env = UnityEnv(name='Crawler', graphics=True)
+with torch.no_grad():
+  env.rollout(1000, policy=policy, break_when_any_done=False)
+```
+Check `quickstart.ipynb` for a complete walkthrough.
 
 ## **Usage**
 
@@ -12,8 +65,8 @@ There are 2 main components:
     - rlkit contains algorithms (like ppo, sac), unity environments (with torchrl transforms), and other utility.
 
 ```python
-env = UnityEnv(name='3DBall', path=None, graphics=True, time_scale=1, seed=1)
-agent = PPOAgent('3DBall', 'conf1', 'run1') # from huggingface: notnotDroid/unity-rl
+env = UnityEnv(name='Crawler', path=None, graphics=True, time_scale=1, seed=1)
+agent = PPOAgent('Crawler', 'conf1', 'run9')
 ```
 
 2. experiment runner
@@ -62,18 +115,16 @@ This package contains reusable resources:
 
 The training templates are meant to be used as templates rather than robust algorithms (customize them).
 
-### **TODO**
+### **ToDo**
 
-1. Finish models for vector environments (Crawler, PushBlock, Walker, WallJump, Worm) remaining
+1. Finish models for vector environments (3DBall, Crawler, PushBlock, Walker, WallJump, Worm).
 2. Add support for visual environments (GridWorld, Match 3)
 3. Add support for multi agent environments (food collector, soccer twos, striker vs. goalie, co-op pushblock, dungeon escape)
 4. Add SAC
 5. Add support for sparse reward environments (hallway, pryamids)
 6. Add support for variable length observation environments (sorter)
 
-- Add Docker support
-- Add evaluation function
-- Train WallJump
+- Also add Docker support
 
 ## **Environments**
 
