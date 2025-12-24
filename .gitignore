@@ -5,6 +5,7 @@
 # Checkpoints/Model
 *.ckpt
 *.pt
+experiments/
 
 # Ignore Unity build outputs
 built_envs/
