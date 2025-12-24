@@ -11,7 +11,7 @@ env:
     n_envs: 32
   params:
     time_scale: 10
-    path: built_envs/PushBlock.app
+repo_id: notnotDroid/unity-rl
 conf_name: conf1
 run_name: run1
 algo:
@@ -50,16 +50,20 @@ dir: experiments/${env.name}/${algo.name}/${conf_name}
 model_path: ${dir}/models/${run_name}.pt
 results_path: ${dir}/results/${run_name}.png
 logger:
-  _target_: rlkit.utils.TensorBoardLogger
+  _target_: rlkit.utils.HFTBLogger
   log_dir: ${dir}/logs/${run_name}
+  repo_id: ${repo_id}
+  repo_subfolder: ${dir}/logs/${run_name}
 checkpointer:
-  _target_: rlkit.utils.Checkpointer
+  _target_: rlkit.utils.HFCheckpointer
   ckpt_path: ${dir}/ckpts
   name: ${run_name}
+  repo_id: ${repo_id}
 lr_scheduler:
   _target_: rlkit.utils.CosineWithLinearWarmupSchedule
   warmup_epochs: 2
   initial_lr: 1.0e-06
   max_lr: 0.0003
 verbose: true
-continue_: false
+continue_: true
+hf_sync_interval: 500

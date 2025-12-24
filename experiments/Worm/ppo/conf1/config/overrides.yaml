@@ -1,4 +1,4 @@
 - +verbose=True
-- +continue_=True
-- run_name=run9
+- +continue_=False
+- run_name=run1
 - +hf_sync_interval=500

@@ -24,13 +24,13 @@ trainer:
   _target_: rlkit.templates.PPOBasic
   params:
     generations: 5000
-    generation_size: 100_000
+    generation_size: 80_000
     slice_len: 1000
     n_slices: 100
     epochs: 10
     minibatch_size: 1024
 
-    workers: 10
+    workers: 8
     env_batch_dim: ${env.info.batch_dims}
 
     kl_soft_clip: 0.02

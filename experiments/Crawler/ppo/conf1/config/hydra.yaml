@@ -114,12 +114,12 @@ hydra:
     task:
     - +verbose=True
     - +continue_=True
-    - +env.params.path=built_envs/Crawler.app
     - run_name=run9
+    - +hf_sync_interval=500
   job:
     name: run_experiment
     chdir: null
-    override_dirname: +continue_=True,+env.params.path=built_envs/Crawler.app,+verbose=True,run_name=run9
+    override_dirname: +continue_=True,+hf_sync_interval=500,+verbose=True,run_name=run9
     id: ???
     num: ???
     config_name: crawler_ppo

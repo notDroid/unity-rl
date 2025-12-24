@@ -1,4 +1,4 @@
 - +verbose=True
-- +continue_=False
-- +env.params.path=built_envs/PushBlock.app
+- +continue_=True
 - run_name=run1
+- +hf_sync_interval=500

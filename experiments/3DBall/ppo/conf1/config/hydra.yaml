@@ -114,12 +114,12 @@ hydra:
     task:
     - +verbose=True
     - +continue_=True
-    - +env.params.path=built_envs/3DBall.app
     - run_name=run2
+    - +hf_sync_interval=500
   job:
     name: run_experiment
     chdir: null
-    override_dirname: +continue_=True,+env.params.path=built_envs/3DBall.app,+verbose=True,run_name=run2
+    override_dirname: +continue_=True,+hf_sync_interval=500,+verbose=True,run_name=run2
     id: ???
     num: ???
     config_name: 3dball_ppo

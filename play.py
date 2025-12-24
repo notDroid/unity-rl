@@ -48,7 +48,7 @@ def run_evaluation(args):
 
     except Exception as e:
         print(f"\n\033[91m[ERROR] Failed to run experiment: {e}\033[0m")
-        print(f"Tip: Use 'python evaluate.py ls {args.env_name}' to see valid options.")
+        print(f"Tip: Use 'python play.py ls {args.env_name}' to see valid options.")
         sys.exit(1)
 
 def main():

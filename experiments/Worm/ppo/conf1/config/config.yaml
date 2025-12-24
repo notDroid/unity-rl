@@ -1,86 +1,69 @@
-conf_name: conf1
-run_name: run1 # Variable per run of the same config
-
-# 1. Environment
-defaults:
-  - env: 3dball
-  - info
-  - _self_
-
 env:
+  name: Worm
+  observation:
+    type: vector
+    dim: 64
+  action:
+    type: continuous
+    dim: 9
+  info:
+    batch_dims: 1
+    n_envs: 10
   params:
     time_scale: 10
-
-# 2. Algorithm
+repo_id: notnotDroid/unity-rl
+conf_name: conf1
+run_name: run1
 algo:
   name: ppo
   _target_: runners.ppo.PPORunner
   params:
     epsilon: 0.2
-    entropy_coef: 1e-3
+    entropy_coef: 0.01
     gamma: 0.99
-
 trainer:
   _target_: rlkit.templates.PPOBasic
   params:
-    generations: 100
-    generation_size: 12_000
-    slice_len: 100
-    n_slices: 120
-    epochs: 2
-    minibatch_size: 256
-
-    workers: 10
-    env_batch_dim: 1
-
+    generations: 5000
+    generation_size: 80000
+    slice_len: 1000
+    n_slices: 100
+    epochs: 10
+    minibatch_size: 1024
+    workers: 8
+    env_batch_dim: ${env.info.batch_dims}
     kl_soft_clip: 0.02
     early_stop_threshold: 32
     kl_hard_clip: 0.05
-
-# 3. Model
 model:
   _target_: rlkit.models.MLP
   params:
-    in_features: "${env.observation.dim}"
-    out_features: "${env.action.dim}"
+    in_features: ${env.observation.dim}
+    out_features: ${env.action.dim}
     n_blocks: 1
-    hidden_dim: 32
-
-# 4. State
+    hidden_dim: 128
 optimizer:
   _target_: torch.optim.Adam
   params:
-    lr: 1e-6 # Matches initial lr schedule
-
-
-### Utility
-
-# Change working directory
+    lr: 1.0e-07
 dir: experiments/${env.name}/${algo.name}/${conf_name}
-hydra:
-  output_subdir: config
-  run:
-    dir: ${dir}
 model_path: ${dir}/models/${run_name}.pt
 results_path: ${dir}/results/${run_name}.png
-
-# Logger
 logger:
   _target_: rlkit.utils.HFTBLogger
   log_dir: ${dir}/logs/${run_name}
   repo_id: ${repo_id}
   repo_subfolder: ${dir}/logs/${run_name}
-
-# Checkpointer
 checkpointer:
   _target_: rlkit.utils.HFCheckpointer
   ckpt_path: ${dir}/ckpts
   name: ${run_name}
   repo_id: ${repo_id}
-
-# LR Scheduler
 lr_scheduler:
   _target_: rlkit.utils.CosineWithLinearWarmupSchedule
-  warmup_epochs: 1
-  initial_lr: 1e-6
-  max_lr: 1e-4
+  warmup_epochs: 5
+  initial_lr: 1.0e-07
+  max_lr: 1.0e-05
+verbose: true
+continue_: false
+hf_sync_interval: 500

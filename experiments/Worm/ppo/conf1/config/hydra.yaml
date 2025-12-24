@@ -113,16 +113,16 @@ hydra:
     - hydra.mode=RUN
     task:
     - +verbose=True
-    - +continue_=True
+    - +continue_=False
     - run_name=run1
     - +hf_sync_interval=500
   job:
     name: run_experiment
     chdir: null
-    override_dirname: +continue_=True,+hf_sync_interval=500,+verbose=True,run_name=run1
+    override_dirname: +continue_=False,+hf_sync_interval=500,+verbose=True,run_name=run1
     id: ???
     num: ???
-    config_name: pushblock_ppo
+    config_name: worm_ppo
     env_set: {}
     env_copy: []
     config:
@@ -144,9 +144,9 @@ hydra:
     - path: ''
       schema: structured
       provider: schema
-    output_dir: /Users/walimirza/unity-rl/experiments/PushBlock/ppo/conf1
+    output_dir: /Users/walimirza/unity-rl/experiments/Worm/ppo/conf1
     choices:
-      env: pushblock
+      env: worm
       hydra/env: default
       hydra/callbacks: null
       hydra/job_logging: default

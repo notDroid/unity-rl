@@ -34,7 +34,7 @@ You can list available models and run them immediately from the command line.
 python play.py ls
 
 # Run a specific environment (auto-downloads model from HF)
-python play.py 3DBall ppo conf1 run1 --graphics
+python play.py Crawler ppo conf1 run9 --graphics
 ```
 
 **3. Python Usage** 
@@ -75,6 +75,8 @@ agent = PPOAgent('Crawler', 'conf1', 'run9')
 ```bash
 python run_experiment.py -cn "config_name" +verbose=True +continue_=False run_name="run_name"
 ```
+
+Both have huggingface integration to upload/download models automatically at https://huggingface.co/notnotDroid/unity-rl (default).
 
 ### **Unity Environments**
 You can either use the built in unity environments or download them manually. The manual download ones look better and may be necessary if the unity registry is down.

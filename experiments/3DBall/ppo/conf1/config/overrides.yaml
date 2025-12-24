@@ -1,4 +1,4 @@
 - +verbose=True
 - +continue_=True
-- +env.params.path=built_envs/3DBall.app
 - run_name=run2
+- +hf_sync_interval=500

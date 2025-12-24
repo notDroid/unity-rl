@@ -4,6 +4,7 @@ run_name: run1 # Variable per run of the same config
 # 1. Environment
 defaults:
   - env: worm
+  - info
   - _self_
 
 env:
@@ -25,7 +26,7 @@ trainer:
     generations: 5000
     generation_size: 80_000
     slice_len: 1000
-    n_slices: 20
+    n_slices: 100
     epochs: 10
     minibatch_size: 1024
 
@@ -65,14 +66,17 @@ results_path: ${dir}/results/${run_name}.png
 
 # Logger
 logger:
-  _target_: rlkit.utils.TensorBoardLogger
+  _target_: rlkit.utils.HFTBLogger
   log_dir: ${dir}/logs/${run_name}
+  repo_id: ${repo_id}
+  repo_subfolder: ${dir}/logs/${run_name}
 
 # Checkpointer
 checkpointer:
-  _target_: rlkit.utils.Checkpointer
+  _target_: rlkit.utils.HFCheckpointer
   ckpt_path: ${dir}/ckpts
   name: ${run_name}
+  repo_id: ${repo_id}
 
 # LR Scheduler
 lr_scheduler:
