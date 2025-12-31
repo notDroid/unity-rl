@@ -25,6 +25,8 @@ def create_unity_env(path=None, registered_name=None, graphics=False, **kwargs):
 
     if path and registered_name: print("Cannot have both path and registered_name")
     if not path and not registered_name: print("Must have at least one of path or registered_name")
+    if "seed" not in kwargs:
+        kwargs["seed"] = np.random.randint(1, 10_000)
     
     # Gambling
     for i in range(ATTEMPTS):

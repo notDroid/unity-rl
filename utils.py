@@ -5,8 +5,8 @@ from hydra.utils import get_class, instantiate
 from omegaconf import DictConfig, OmegaConf
 from runners.ppo import make_ppo_agent
 
-from rlkit.utils import download_from_hf_hub, upload_to_hf_hub
-from huggingface_hub import HfFileSystem
+from rlkit.utils import hf_hub_download_and_copy
+from huggingface_hub import HfFileSystem, upload_file
 
 todict = lambda x: OmegaConf.to_container(x, resolve=True)
 
@@ -32,17 +32,17 @@ def ppo_upload_model(directory_path, save_name, config_file="config/config.yaml"
     config_path = os.path.join(directory_path, config_file)
     save_path = os.path.join(directory_path, save_name)
 
-    upload_to_hf_hub(local_path=config_path, repo_id=repo_id, remote_path=config_path, **kwargs)
-    upload_to_hf_hub(local_path=save_path, repo_id=repo_id, remote_path=save_path, **kwargs)
+    upload_file(path_or_fileobj=config_path, path_in_repo=config_path, repo_id=repo_id, repo_type="model", **kwargs)
+    upload_file(path_or_fileobj=save_path, path_in_repo=save_path, repo_id=repo_id, repo_type="model", **kwargs)
 
 def ppo_download_model(directory_path, save_name, config_file="config/config.yaml", repo_id=DEFAULT_REPO_ID, **kwargs):
     config_path = os.path.join(directory_path, config_file)
     save_path = os.path.join(directory_path, save_name)
 
-    download_from_hf_hub(local_path=config_path, repo_id=repo_id, remote_path=config_path, **kwargs)
-    download_from_hf_hub(local_path=save_path, repo_id=repo_id, remote_path=save_path, **kwargs)
+    hf_hub_download_and_copy(local_path=config_path, repo_id=repo_id, remote_path=config_path, **kwargs)
+    hf_hub_download_and_copy(local_path=save_path, repo_id=repo_id, remote_path=save_path, **kwargs)
 
-def PPOAgent(environment_name, config_name, run_name, save_type='models', config_file="config/config.yaml", repo_id=DEFAULT_REPO_ID, **kwargs):
+def PPOAgent(environment_name, config_name, run_name, save_type='models', config_file="config/config.yaml", repo_id=DEFAULT_REPO_ID, no_cache=False, dkwargs=None, lkwargs=None):
     directory_path = os.path.join("experiments", environment_name, 'ppo', config_name)
 
     if save_type == 'models': suffix = '.pt'
@@ -54,11 +54,11 @@ def PPOAgent(environment_name, config_name, run_name, save_type='models', config
     save_path = os.path.join(directory_path, save_name)
     
     # Download if needed
-    if not os.path.exists(config_path) or not os.path.exists(save_path):
-        ppo_download_model(directory_path, save_name, config_file, repo_id, **kwargs)
+    if no_cache or (not os.path.exists(config_path) or not os.path.exists(save_path)):
+        ppo_download_model(directory_path, save_name, config_file, repo_id, **(dkwargs or {}))
 
     # Create model
-    return ppo_load_config(directory_path, save_name, config_file)
+    return ppo_load_config(directory_path, save_name, config_file, **(lkwargs or {}))
 
 def _print_tree_recursive(node, indent=""):
     """Helper to visualize the dictionary structure."""

@@ -23,10 +23,10 @@ algo:
 trainer:
   _target_: rlkit.templates.PPOBasic
   params:
-    generations: 5000
+    generations: 20_000
     generation_size: 80_000
     slice_len: 1000
-    n_slices: 100
+    n_slices: 1000
     epochs: 10
     minibatch_size: 1024
 
@@ -83,4 +83,4 @@ lr_scheduler:
   _target_: rlkit.utils.CosineWithLinearWarmupSchedule
   warmup_epochs: 5
   initial_lr: 1e-7
-  max_lr: 1e-5
+  max_lr: 3e-5

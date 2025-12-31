@@ -10,7 +10,8 @@ from tensordict.nn import TensorDictModule
 from rlkit.modules import PolicyWrapper, ValueWrapper, PPOLossModule
 from rlkit.templates import PPOBasic, PPOTrainConfig, PPOState, ppo_log_keys
 from rlkit.envs import UnityEnv
-from rlkit.utils import plot_results, upload_to_hf_hub
+from rlkit.utils import plot_results
+from huggingface_hub import upload_file
 from torchinfo import summary
 
 todict = lambda x: OmegaConf.to_container(x, resolve=True)
@@ -161,7 +162,7 @@ class PPORunner:
         repo_id = self.config.get("repo_id", 'notnotDroid/unity-rl')
         if sync_interval:
             config_path = os.path.join(self.config.dir, "config", "config.yaml")
-            upload_to_hf_hub(config_path, repo_id, config_path, commit_message="config upload")
+            upload_file(path_or_fileobj=config_path, path_in_repo=config_path, repo_id=repo_id, repo_type="model", commit_message="config upload")
             
 
         ### 3. Run PPO
@@ -182,7 +183,7 @@ class PPORunner:
         ppo.close(model_path)
 
         if sync_interval and model_path:
-            upload_to_hf_hub(local_path=model_path, repo_id=repo_id, remote_path=model_path, commit_message="model upload")
+            upload_file(path_or_fileobj=model_path, path_in_repo=model_path, repo_id=repo_id, repo_type="model", commit_message="model upload")
         if sync_interval and logger: logger.sync_to_hub()
         
         if "results_path" in self.config and logger:

@@ -56,27 +56,27 @@ with torch.no_grad():
 ```
 Check `quickstart.ipynb` for a complete walkthrough.
 
-## **Usage**
+## **Architecture & Usage**
 
-**Organization**
+### **Organization**
 
 There are 2 main components: 
-1. rlkit
-    - rlkit contains algorithms (like ppo, sac), unity environments (with torchrl transforms), and other utility.
+**1. rlkit**
+  - rlkit contains algorithms (like ppo, sac), unity environments (with torchrl transforms), and other utility.
 
 ```python
 env = UnityEnv(name='Crawler', path=None, graphics=True, time_scale=1, seed=1)
 agent = PPOAgent('Crawler', 'conf1', 'run9')
 ```
 
-2. experiment runner
-    - I use hydra to manage configs for (environment, algorithm, config) tuples. 
-    - Experiment results are under experiments/, configs under configs/, and the code for the experiment runner has its entry point at run_experiment.py. 
+**2. experiment runner**
+  - I use hydra to manage configs for (environment, algorithm, config) tuples. 
+  - Experiment results are under experiments/, configs under configs/, and the code for the experiment runner has its entry point at run_experiment.py. 
 ```bash
 python run_experiment.py -cn "config_name" +verbose=True +continue_=False run_name="run_name"
 ```
 
-Both have huggingface integration to upload/download models automatically at https://huggingface.co/notnotDroid/unity-rl (default).
+Both have huggingface integration to upload/download models, checkpoints, logs automatically at https://huggingface.co/notnotDroid/unity-rl (default).
 
 ### **Unity Environments**
 You can either use the built in unity environments or download them manually. The manual download ones look better and may be necessary if the unity registry is down.
@@ -89,9 +89,13 @@ You can either use the built in unity environments or download them manually. Th
 
 ### **Python Environment**
 
+Either run install.sh or manually install the dependencies.
+
+**Manual Install**
+
 First of all conda is required (something weird about grpcio, wheel won't build) so make sure its properly setup. Then run these at project root:
 
-```
+```Bash
 # Create conda environment
 conda create -n mlagents python=3.10.12
 conda activate mlagents
@@ -110,14 +114,14 @@ Note that the numpy version conflicts with mlagents because of gym (deprecated),
 
 ### **RLKit**
 This package contains reusable resources:
-- mlagent environments (with torchrl transforms)
-- training templates (ppo/sac)
-- utils (checkpointer/logger)
-- models (mlp/cnn)
+1. mlagent environments (with torchrl transforms)
+2. training templates (ppo/sac)
+    - The training templates are meant to be used as templates rather than robust algorithms (customize them).
+3. utils (checkpointer/logger)
+4. models (mlp/cnn)
 
-The training templates are meant to be used as templates rather than robust algorithms (customize them).
 
-### **ToDo**
+### **TODO**
 
 1. Finish models for vector environments (3DBall, Crawler, PushBlock, Walker, WallJump, Worm).
 2. Add support for visual environments (GridWorld, Match 3)
@@ -130,94 +134,28 @@ The training templates are meant to be used as templates rather than robust algo
 
 ## **Environments**
 
-### **3DBall**
+### **Summary of Results**
 
+**Reproducibility**
 
-<img src="assets/3DBallModel.gif" alt="3dball model" width="48%" style="margin-right: 10px;"> <img src="assets/3DBallRandom.gif" alt="3dball random" width="48%">
+Models and training logs (with plots) are available on [Hugging Face](https://huggingface.co/notnotDroid/unity-rl). Training runs can be reproduced with:
 
-**Info**
-- vector observation of dim: 8, vector action of dim: 2 (continuous)
-- 12 parallel environments
-- reward: +0.1 survival, -1 failure 
-
-```python
-env = UnityEnv(name='3DBall')
-```
-
-**PPO**
-<p align="center">
-  <img src="experiments/3DBall/ppo/conf1/results/run1.png" alt="3dball results" width="60%">
-</p>
-
-- episode length = timesteps
-
-Train:
 ```bash
-python run_experiment.py -cn 3dball_ppo +verbose=True +continue_=False run_name=run1
-```
-Model:
-```python
-agent = PPOAgent('3DBall', 'conf1', 'run1')
+python run_experiment.py -cn <config_name> +verbose=True +continue_=False run_name=<run_name>
 ```
 
-### **PushBlock**
+**Results**
 
-<img src="assets/PushBlockModel.gif" alt="pushblock model" width="48%" style="margin-right: 10px;"> <img src="assets/PushBlockRandom.gif" alt="pushblock random" width="48%">
-
-**Info**
-- vector observation of dim 210, vector action of dim 7
-- 32 parallel environments
-- reward -0.0025 step, +1 goal
-
-```python
-env = UnityEnv(name='PushBlock')
-```
-
-**PPO**
-
-<p align="center">
-  <img src="experiments/PushBlock/ppo/conf1/results/run1.png" alt="pushblock results" width="60%">
-</p>
-
-- avg return: 4.5, avg episode length: 40
-
-Train:
-```bash
-python run_experiment.py -cn pushblock_ppo +verbose=True +continue_=False run_name=run1
-```
-Model:
-```python
-agent = PPOAgent('PushBlock', 'conf1', 'run1')
-```
-
-### **Crawler**
-
-<img src="assets/CrawlerModel.gif" alt="crawler model" width="48%" style="margin-right: 10px;"> <img src="assets/CrawlerRandom.gif" alt="crawler random" width="48%">
+The following table summarizes the average returns achieved by each (environment, algorithm, config) tuple.
+- For environments with truncation the window is 1000 timesteps.
 
 
-**Info**
-- vector observation of dim 158, vector action of dim 20
-- 10 parallel environments
-- Dense reward (see [mlagents-examples](https://github.com/Unity-Technologies/ml-agents/blob/main/docs/Learning-Environment-Examples.md) for details)
+| Environment | Algorithm      | Config File    | Average Return | Episode Length | Timesteps Trained |
+|-------------|----------------|----------------|----------------| ----------------|-------------------|
+| 3DBall      | PPO            | 3dball_ppo     | 100            | 1000            | 400k              |
+| PushBlock   | PPO            | pushblock_ppo  | 4.9            | 48.2            | 50M               |
+| WallJump    | PPO            | walljump_ppo   | 0.96           | 29.7            | 500M              |
+| Crawler     | PPO            | crawler_ppo    | 360            | 1000            | 400M              |
+| Worm        | PPO            | worm_ppo       | 100            | 1000            | 100M              |
+| Walker      | PPO            | walker_ppo     | 25             | 1000            | 1.6B              |
 
-```python
-env = UnityEnv(name='Crawler')
-```
-
-**PPO**
-
-<p align="center">
-  <img src="experiments/Crawler/ppo/conf1/results/run9.png" alt="crawler results" width="60%">
-</p>
-
-- avg return with window 1000: 360
-
-
-Train:
-```bash
-python run_experiment.py -cn crawler_ppo +verbose=True +continue_=False run_name=run9
-```
-Model:
-```python
-agent = PPOAgent('Crawler', 'conf1', 'run9')
-```

@@ -23,7 +23,7 @@ algo:
 trainer:
   _target_: rlkit.templates.PPOBasic
   params:
-    generations: 5000
+    generations: 2500
     generation_size: 80_000
     slice_len: 1000
     n_slices: 100
