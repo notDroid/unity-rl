@@ -1,4 +1,9 @@
 # Unity ML-Agents with TorchRL
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10.12-blue)](https://www.python.org/)
+[![Unity](https://img.shields.io/badge/Unity-ML--Agents-lightgrey)](https://github.com/Unity-Technologies/ml-agents)
+[![TorchRL](https://img.shields.io/badge/TorchRL-0.10-orange)](https://pytorch.org/rl/)
+
 This repo contains examples of solving reinforcement learning scenarios from unity [mlagents](https://github.com/Unity-Technologies/ml-agents) with TorchRL. 
 
 <p align="center">
