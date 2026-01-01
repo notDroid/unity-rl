@@ -136,6 +136,8 @@ This package contains reusable resources:
 
 ### **Summary of Results**
 
+My configs are likely not optimal, but they work reasonably well. Feel free to open an issue or PR if you have better hyperparameters or training tricks.
+
 **Reproducibility**
 
 Models and training logs (with plots) are available on [Hugging Face](https://huggingface.co/notnotDroid/unity-rl). Training runs can be reproduced with:

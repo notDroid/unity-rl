@@ -6,6 +6,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib.animation import ArtistAnimation
+import tensorboard.backend.event_processing.event_accumulator as ea
 
 from huggingface_hub import HfApi, hf_hub_download, upload_file
 
@@ -22,9 +23,8 @@ class Stopwatch:
 def round_up(x: float | int, y: int = 1):
     return ((x + y - 1) // y) * y
 
-def plot_results(logger, path=None, log_index=None, ewma_span=0):
+def plot_results(df, path=None, log_index=None, ewma_span=0):
     # Get dataframe
-    df = logger.dataframe()
     if log_index:
         df = df.set_index(log_index)
     df.index = pd.to_numeric(df.index, errors='coerce')

@@ -248,6 +248,17 @@ class TensorBoardLogger(LoggerBase):
         - log use next() + log ops
     '''
     def __init__(self, keys, log_dir):
+        # Infer keys from existing log dir if not provided
+        if keys is None:
+            if not os.path.exists(log_dir):
+                raise KeyError("log_dir does not exist, must provide keys to create new logger")
+            try:
+                event_acc = EventAccumulator(path=log_dir)
+                event_acc.Reload()
+                keys = event_acc.Tags()['scalars']
+            except:
+                raise KeyError("Failed to get keys from existing log_dir, must provide keys to create new logger")
+        
         super().__init__(keys)
         
         self.log_dir = log_dir

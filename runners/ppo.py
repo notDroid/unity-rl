@@ -189,4 +189,4 @@ class PPORunner:
         if "results_path" in self.config and logger:
             results_path = self.config.results_path
             os.makedirs(os.path.dirname(results_path), exist_ok=True)
-            plot_results(logger, results_path, log_index="timestep") # Assuming timestep is a provided key
+            plot_results(logger.dataframe(), results_path, log_index="timestep") # Assuming timestep is a provided key
