@@ -5,6 +5,7 @@ from torch import nn
 # TorchRL
 from torchrl.collectors import SyncDataCollector, MultiSyncDataCollector
 from torchrl.data import ReplayBuffer, LazyMemmapStorage, SliceSamplerWithoutReplacement, SamplerWithoutReplacement
+from torchrl.modules import ActorValueOperator, ValueOperator, ActorCriticWrapper
 
 # Util
 from .ppo_config import PPOTrainConfig, PPOState
@@ -83,11 +84,20 @@ class PPOTrainModule:
         if self.state.scaler is None:
             self.state.scaler = torch.amp.GradScaler(enabled=(self.config.amp_dtype == torch.float16))
 
+        self.trunk = None
+        if not isinstance(self.state.model, ActorCriticWrapper): # Assume only ActorCriticWrapper doesn't have trunk, add more later if needed
+            self.trunk = self.state.model.module[0]
+
     def step(self, batch, epoch, j):
         # -------------- a. Compute Loss --------------
         with torch.autocast(device_type=self.config.device_type, dtype=self.config.amp_dtype, enabled=(self.config.amp_dtype==torch.float16)):
+            # Trunk forward pass if exists
+            if self.trunk:
+                batch = self.trunk(batch)
+
+            # Head forward pass and loss computation
             loss_data = self.state.loss_module(batch)
-            loss = loss_data["loss_objective"].mean() + loss_data["loss_critic"].mean() + loss_data["loss_entropy"].mean()
+            loss = sum(v.mean() for k, v in loss_data.items() if k.startswith("loss_"))
 
         # -------------- b. KL Safety Check --------------
         kl_approx = loss_data["kl_approx"].mean().cpu().item()
@@ -118,11 +128,11 @@ class PPOTrainModule:
     @staticmethod
     def ppo_loss_td_to_dict(loss_data, weight):
         # Hard coded keys, values
-        keys = ["value_loss", "explained_variance", "policy_loss", "kl_approx", "clip_fraction", "ESS"]
-        values = ["loss_critic", "explained_variance", "loss_objective", "kl_approx", "clip_fraction", "ESS"]
+        keys = ["value_loss", "explained_variance", "policy_loss", "kl_approx", "clip_fraction", "ESS", "inverse_loss"]
+        values = ["loss_critic", "explained_variance", "loss_objective", "kl_approx", "clip_fraction", "ESS", "loss_inverse_dynamics"]
 
         return {
-            key: (loss_data[value].detach().mean().item(), weight) for key, value in zip(keys, values)
+            key: (loss_data[value].detach().mean().item(), weight) for key, value in zip(keys, values) if value in loss_data
         }
     
     def train(self):
@@ -234,10 +244,10 @@ class PPOBasic:
         if self.verbose: print(f"[{gen+1}/{self.config.generations}] Trained in {train_time}")
 
         # 4. Log and Checkpoint
-        if self.state.logger and (gen % self.config.log_interval) == 0:
+        if self.state.logger and ((gen+1) % self.config.log_interval) == 0:
             self.state.logger.add({"time": self.long_watch.end()})
             self._log_step()
-        if self.state.checkpointer and (gen % self.config.checkpoint_interval) == 0:
+        if self.state.checkpointer and ((gen+1) % self.config.checkpoint_interval) == 0:
             self._ckpt_step(gen, metrics)
         if self.verbose and not self.state.logger: print(f"[{gen+1}/{self.config.generations}] Step Results: {metrics}")
 

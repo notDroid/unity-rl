@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from .mlp import MLP
 
 class CatWrapper(nn.Module):
     def __init__(self, module, dim=-1):

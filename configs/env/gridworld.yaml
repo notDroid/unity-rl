@@ -1,0 +1,18 @@
+name: "GridWorld"
+
+observation:
+  observation_keys: [visual_observation, indicator]
+  visual_observation:
+    type: visual
+    height: 64
+    width: 84
+    channels: 3
+  indicator:
+    type: vector
+    dim: 2
+action:
+  type: discrete
+  dim: 5
+info:
+  batch_dims: 1
+  n_envs: 9

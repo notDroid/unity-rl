@@ -61,11 +61,12 @@ with torch.no_grad():
 ```
 Check `quickstart.ipynb` for a complete walkthrough.
 
-## **Architecture & Usage**
+## **Architecture**
 
 ### **Organization**
 
 There are 2 main components: 
+
 **1. rlkit**
   - rlkit contains algorithms (like ppo, sac), unity environments (with torchrl transforms), and other utility.
 
@@ -136,6 +137,36 @@ This package contains reusable resources:
 6. Add support for variable length observation environments (sorter)
 
 - Also add Docker support
+
+## **Training**
+
+This package can be used to train RL agents on Unity ML-Agents environments. It's meant to be highly modular and customizable. There are 3 main steps:
+
+1. TorchRL Compatible Environment
+2. Algorithm Template
+3. Config File
+
+### **Running Experiments**
+You can use existing (env, algo, config) tuples or create your own as needed.
+
+```Bash
+python run_experiment.py -cn <config_name> +verbose=True +continue_=False run_name=<run_name> repo_id=<huggingface_repo_id> hf_sync_interval=<sync_interval>
+```
+
+**Arguments:**
+- `config_name`: Name of the config file under configs/ (without .yaml)
+- `run_name`: Name of the run (used for logging/checkpointing), should be unique in the scope of a config.
+- If using huggingface integration make sure to authenticate your account with `hf auth`, otherwise don't specify a `sync_interval`. 
+- Configs provided use tensorboard logger by default, you can change it or view the logs at the directory: `experiments/<env>/<algo>/<config>/logs/<run_name>/`. The nested structure let's you compare many runs under different algorithms/configs by specifying a more general path.
+
+
+### **Customization**
+**Environments and Configs**:
+- You can create your own environments and configs by using the existing ones as templates (should be relatively straightforward). 
+
+**Algorithms**:
+- The main feature of this project is the training templates like (ppo/sac) which you can copy and modify as needed (for instance adapting PPO for diffusion policies). 
+- Each training template also has a corresponding runner with it that handles config files.
 
 ## **Environments**
 
