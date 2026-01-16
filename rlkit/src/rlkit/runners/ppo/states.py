@@ -44,30 +44,29 @@ class PPOStateBuilder:
     def _build_optional_components(self, config, state):
         """Build optional components like logger, checkpointer, etc."""
         components = {}
-        comp_map = config.state.get("components", {}).keys()
         
-        if 'logger' in comp_map:
+        if config.state.components.get('logger'):
             # Instantiate logger with inferred keys if not provided
-            if 'keys' not in config.state.components.logger:
+            if not config.state.components.logger.get("keys"):
                 log_keys = self._get_log_keys(config)
                 components['logger'] = instantiate(config.state.components.logger, keys=log_keys)
             else:
                 components['logger'] = instantiate(config.state.components.logger)
         
-        if 'checkpointer' in comp_map:
+        if config.state.components.get('checkpointer'):
             components['checkpointer'] = instantiate(config.state.components.checkpointer)
 
-        if 'lr_scheduler' in comp_map:
+        if config.state.components.get('lr_scheduler'):
             lr_scheduler = instantiate(
                 config.state.components.lr_scheduler, 
                 optimizer=state['optimizer'],
             )
             components['lr_scheduler'] = lr_scheduler
 
-        if 'scaler' in comp_map:
+        if config.state.components.get('scaler'):
             components['scaler'] = torch.amp.GradScaler()
         
-        if 'metric_module' in comp_map:
+        if config.state.components.get('metric_module'):
             components['metric_module'] = instantiate(config.state.components.metric_module)
         else:
             components['metric_module'] = SimpleMetricModule(mode='approx')
@@ -86,12 +85,12 @@ class PPOStateBuilder:
             raise Warning("No checkpointer found in state; cannot restore past state.")
         
     def _get_log_keys(self, config):
-        if "keys" in config.state.components.logger:
+        if config.state.components.logger.get("keys"):
             return list(config.state.components.logger.keys)
         log_keys = ppo_log_keys.copy()
         maybe_add_key(log_keys, "lr_scheduler" in config.state.components, 'lr')
-        if 'params' in config.state.components.logger:
-            maybe_add_key(log_keys, config.loss.loss_params.get("inverse_coef", 0) > 0, 'inverse_loss')
+        if config.loss.get('loss_params') and config.loss.loss_params.get("inverse_dynamics_coeff"):
+            maybe_add_key(log_keys, config.loss.loss_params.get("inverse_dynamics_coeff") > 0, 'inverse_dynamics_loss')
         return log_keys
 
 

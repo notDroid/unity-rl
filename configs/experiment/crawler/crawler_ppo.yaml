@@ -1,0 +1,44 @@
+# @package _global_
+defaults:
+  - /env: 3dball
+  - /template: ppo_vector
+
+conf_name: conf1
+
+env:
+  params:
+    time_scale: 10
+
+agent:
+  head_config:
+    hidden_dim: 8
+    n_blocks: 1
+
+loss:
+  loss_params:
+    epsilon: 0.2
+    entropy_coeff: 1e-2
+  value_estimator_params:
+    gamma: 0.99
+    lmbda: 0.95
+
+trainer:
+  params:
+    generations: 5000
+    generation_size: 80_000
+    slice_len: 1000
+    n_slices: 20
+    epochs: 10
+    minibatch_size: 1024
+
+    workers: 8
+
+state:
+  components:
+    optimizer:
+      _target_: torch.optim.Adam
+      lr: ${state.components.lr_scheduler.initial_lr} 
+    lr_scheduler:
+      warmup_epochs: 5
+      initial_lr: 1e-7
+      max_lr: 1e-5

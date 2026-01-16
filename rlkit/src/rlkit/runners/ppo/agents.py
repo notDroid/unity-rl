@@ -13,13 +13,35 @@ from rlkit.modules import ActorValueInverseOperator
 from rlkit.models.utils import CatWrapper
 todict = lambda x: OmegaConf.to_container(x, resolve=True)
 
-class PPOAgentBuilder:
+class ActorCriticBuilder:
     def build(self, config: DictConfig):
-        return self._make_ppo_agent(config)
+        return self._make_agent(config)
 
-    def _make_ppo_agent(self, config: DictConfig):
+    def _make_agent(self, config: DictConfig):
+            # Determine keys
+            obs_keys = config.agent.get('obs_keys') or config.env.observation.get('observation_keys') or ["observation"]
+            action_type = config.agent.get('action_type', config.env.action.type)
+            hidden_keys = config.agent.get('hidden_keys', ['hidden_features'])  
+            head_in_keys = config.agent.get('head_in_keys') or (obs_keys if not config.get('trunk_net') else ['hidden_features'])
+            obs_keys = list(obs_keys); hidden_keys = list(hidden_keys); head_in_keys = list(head_in_keys)
+
             # 1. Make neural nets
-            trunk_net = instantiate(config.agent.trunk_net) if hasattr(config.agent, 'trunk_net') else None
+
+            # (optional) duplicate head config
+            if config.agent.get('head_config'):
+                config.agent.policy_net = config.agent.head_config
+                config.agent.value_net = config.agent.head_config
+                if config.agent.get('include_inverse_head', None):
+                    config.agent.inverse_net = config.agent.head_config
+            # (optional) infer output dimensions
+            if config.agent.get('head_config') or config.agent.get('infer_out_dim'):
+                # **Depends on head having out_features defined**
+                config.agent.policy_net.out_features = config.env.action.dim * (2 if action_type == "continuous" else 1)
+                config.agent.value_net.out_features = 1
+                if config.get('inverse_net', None):
+                    config.agent.inverse_net.out_features = config.env.action.dim
+
+            trunk_net = instantiate(config.agent.trunk_net) if config.agent.get('trunk_net') else None
             policy_net = instantiate(config.agent.policy_net)
             value_net = instantiate(config.agent.value_net)
 
@@ -28,16 +50,16 @@ class PPOAgentBuilder:
             if "inverse_net" in config.agent and config.agent.inverse_net:
                 inverse_net = instantiate(config.agent.inverse_net)
 
-            # 2. Build operators
-
-            # Determine keys
-            obs_keys = config.agent.get('obs_keys') or config.env.observation.get('observation_keys') or ["observation"]
-            action_type = config.agent.get('action_type', config.env.action.type)
-            hidden_keys = config.agent.get('hidden_keys', ['hidden_features'])
-            head_in_keys = config.agent.get('head_in_keys') or (obs_keys if not trunk_net else ['hidden_features'])
-            obs_keys = list(obs_keys); hidden_keys = list(hidden_keys); head_in_keys = list(head_in_keys)    
-            
-            policy_params = todict(config.agent.policy_params) if 'policy_params' in config.agent else {}
+            # 2. Build operators 
+            if config.agent.get('trunk_module'):
+                trunk_module = instantiate(
+                    config.agent.trunk_module,
+                    in_keys=obs_keys,
+                    out_keys=hidden_keys,
+                )
+            elif not inverse_net and trunk_net:
+                trunk_module = TensorDictModule(trunk_net, in_keys=obs_keys, out_keys=hidden_keys)
+            policy_params = todict(config.agent.policy_params) if config.agent.get('policy_params') else {}
             policy_operator = self._build_policy(policy_net, action_type, head_in_keys, policy_params)
             value_operator = ValueOperator(value_net, in_keys=head_in_keys)
 
@@ -58,7 +80,7 @@ class PPOAgentBuilder:
                     )
                 else:
                     agent = ActorValueOperator(
-                        common_operator=TensorDictModule(trunk_net, in_keys=obs_keys, out_keys=hidden_keys),
+                        common_operator=trunk_module,
                         policy_operator=policy_operator,
                         value_operator=value_operator,
                     )

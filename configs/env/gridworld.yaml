@@ -1,4 +1,5 @@
 name: "GridWorld"
+env_fn: rlkit.envs.UnityEnv
 
 observation:
   observation_keys: [visual_observation, indicator]

@@ -1,0 +1,18 @@
+defaults:
+  - experiment: 3dball/ppo
+
+# Global settings
+run_name: run1 # Variable per run of the same config
+conf_name: conf1
+repo_id: notnotDroid/unity-rl
+
+# Experiment boilerplate
+dir: experiments/${env.name}/${algo.name}/${conf_name}
+hydra:
+  run:
+    dir: ${dir}
+  output_subdir: config
+log_path: ${dir}/logs/${run_name}
+ckpt_path: ${dir}/ckpts
+model_path: ${dir}/models/${run_name}.pt
+results_path: ${dir}/results/${run_name}.png

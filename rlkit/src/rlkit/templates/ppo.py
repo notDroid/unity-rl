@@ -4,8 +4,7 @@ from torch import nn
 
 # TorchRL
 from torchrl.collectors import SyncDataCollector, MultiSyncDataCollector
-from torchrl.data import ReplayBuffer, LazyMemmapStorage, SliceSamplerWithoutReplacement, SamplerWithoutReplacement
-from torchrl.modules import ActorValueOperator, ValueOperator, ActorCriticWrapper
+from torchrl.data import TensorDictReplayBuffer, LazyMemmapStorage, SliceSamplerWithoutReplacement, SamplerWithoutReplacement
 
 # Util
 from .ppo_config import PPOTrainConfig
@@ -38,7 +37,7 @@ class PPOCollectorModule:
                 reset_at_each_iter=False,
             )
 
-        self.buffer = ReplayBuffer(
+        self.buffer = TensorDictReplayBuffer(
             storage=LazyMemmapStorage(
                 self.config.generation_size, 
                 device=self.config.storage_device, 
@@ -67,9 +66,17 @@ class PPOTrainModule:
         self.config = ppo_config
         self.state = ppo_state
 
-        self.buffer = ReplayBuffer(
+        if self.config.train_sampler_type == "random":
+            train_sampler = SamplerWithoutReplacement(shuffle=ppo_config.shuffle_minibatches)
+        elif self.config.train_sampler_type == "slice": 
+            train_sampler = SliceSamplerWithoutReplacement(
+                slice_len = self.config.slice_len,
+                shuffle=ppo_config.shuffle_minibatches, strict_length=False, 
+                end_key=("next", "done"), # Maybe let this be provided
+            )
+        self.buffer = TensorDictReplayBuffer(
             storage=LazyMemmapStorage(self.config.generation_size, device=self.config.storage_device), 
-            sampler=SamplerWithoutReplacement(), 
+            sampler=train_sampler, 
             batch_size=self.config.minibatch_size
         )
 
@@ -121,7 +128,7 @@ class PPOTrainModule:
     @staticmethod
     def ppo_loss_td_to_dict(loss_data, weight):
         # Hard coded keys, values
-        keys = ["value_loss", "explained_variance", "policy_loss", "kl_approx", "clip_fraction", "ESS", "inverse_loss"]
+        keys = ["value_loss", "explained_variance", "policy_loss", "kl_approx", "clip_fraction", "ESS", "inverse_dynamics_loss"]
         values = ["loss_critic", "explained_variance", "loss_objective", "kl_approx", "clip_fraction", "ESS", "loss_inverse_dynamics"]
 
         return {
@@ -171,7 +178,7 @@ class PPOAdvantageModule:
         # print(self.collect_module.buffer)
         for j, batch in enumerate(self.collect_module.buffer):
             batch = batch.to(self.config.device)
-            # print(batch)
+
             with torch.no_grad():
                 self.state.loss_module.value_estimator(batch)
                 metrics = self.state.metric_module(batch)

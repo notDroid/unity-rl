@@ -25,6 +25,7 @@ Clone the repo and run the auto-install script. This handles the complex depende
 ```bash
 git clone https://github.com/notDroid/unity-rl.git
 cd unity-rl
+git checkout v1
 
 bash install.sh
 

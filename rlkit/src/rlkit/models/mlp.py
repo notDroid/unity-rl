@@ -31,14 +31,14 @@ class MLPBlock(nn.Module):
         return x + residual
     
 class MLP(nn.Module):
-    def __init__(self, in_features, hidden_dim, out_features, n_blocks = 1, **kwargs):
+    def __init__(self, in_features, hidden_dim, out_features, n_blocks = 1, norm_layer=nn.RMSNorm, **kwargs):
         super().__init__()
         self.proj_in = nn.Linear(in_features, hidden_dim)
 
         self.mlp_blocks = nn.ModuleList([MLPBlock(hidden_dim, **kwargs) for _ in range(n_blocks)])
         
         self.proj_out = nn.Sequential(
-            nn.RMSNorm((hidden_dim,)),
+            norm_layer((hidden_dim,)),
             nn.Linear(hidden_dim, out_features)
         )
 

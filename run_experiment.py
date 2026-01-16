@@ -5,13 +5,13 @@ from hydra.core.hydra_config import HydraConfig
 import torch
 OmegaConf.register_new_resolver("eval", eval)
 
-@hydra.main(version_base=None, config_path="configs", config_name="3dball_ppo")
+@hydra.main(version_base=None, config_path="configs", config_name="config")
 def main(cfg: DictConfig):
-    with open_dict(cfg):
-        verbose = cfg.setdefault("verbose", True)
-        cfg.setdefault("continue_", True)
-        default_device = "cuda" if torch.cuda.is_available() else "cpu"
-        cfg.setdefault("device", default_device)
+    OmegaConf.set_struct(cfg, False)
+    verbose = cfg.setdefault("verbose", True)
+    cfg.setdefault("continue_", True)
+    default_device = "cuda" if torch.cuda.is_available() else "cpu"
+    cfg.setdefault("device", default_device)
 
     if verbose:
         print(f"Using Config \"{HydraConfig.get().job.config_name}\":\n")

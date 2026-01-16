@@ -50,6 +50,8 @@ class PPOTrainConfig:
     adv_clip: float = 5.0
 
     trunk: bool = False
+    shuffle_minibatches: bool = True
+    train_sampler_type: str = "random"  # Options: "random", "slice"
 
     # Derived Attributes
     timesteps: int = field(init=False)

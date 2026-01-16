@@ -1,4 +1,5 @@
 name: "Crawler"
+env_fn: rlkit.envs.UnityEnv
 
 observation: 
   type: vector

@@ -1,0 +1,66 @@
+# @package _global_
+algo:
+  name: ppo
+  runner: rlkit.runners.ppo.PPORunner
+
+agent:
+  builder: rlkit.runners.ppo.ActorCriticBuilder
+  head_config:
+    _target_: rlkit.models.MLP
+    in_features: ${env.observation.dim}
+    n_blocks: 1
+    hidden_dim: 16
+
+loss:
+  builder: rlkit.runners.ppo.PPOLossBuilder
+  loss: torchrl.objectives.ClipPPOLoss
+  loss_params:
+    epsilon: 0.2
+    entropy_coeff: 1e-2
+    critic_coeff: 1.0
+  value_estimator_params:
+    gamma: 0.99
+    lmbda: 0.95
+
+trainer:
+  builder: rlkit.runners.ppo.PPOTrainerBuilder
+  params:
+    generations: 100
+    generation_size: 1_000
+    slice_len: 100
+    n_slices: 1000
+    epochs: 3
+    minibatch_size: 64
+
+    workers: 1
+    env_batch_dim: ${env.info.batch_dims}
+
+    kl_soft_clip: 0.02
+    early_stop_threshold: 32
+    kl_hard_clip: 0.05
+
+state:
+  builder: rlkit.runners.ppo.PPOStateBuilder
+  components:
+    optimizer:
+      _target_: torch.optim.Adam
+      lr: ${state.components.lr_scheduler.initial_lr}
+
+    logger:
+      _target_: rlkit.utils.HFTBLogger
+      log_dir: ${dir}/logs/${run_name}
+      repo_id: ${repo_id}
+      repo_subfolder: ${dir}/logs/${run_name}
+
+    checkpointer:
+      _target_: rlkit.utils.HFCheckpointer
+      ckpt_path: ${dir}/ckpts
+      name: ${run_name}
+      repo_id: ${repo_id}
+
+    lr_scheduler:
+      _target_: rlkit.utils.CosineWithLinearWarmupSchedule
+      warmup_epochs: 2
+      total_epochs: ${trainer.params.generations}
+      initial_lr: 1e-5
+      max_lr: 1e-3
