@@ -15,7 +15,7 @@ from .ppo_config import PPOTrainConfig
 # PPO State to Save
 @dataclass
 class PPOState:
-    model: ActorValueOperator | ActorCriticWrapper
+    agent: ActorValueOperator | ActorCriticWrapper
     loss_module: ClipPPOLoss
     optimizer: Optimizer
 
@@ -29,41 +29,51 @@ class PPOState:
     start_generation: int = 0
 
 class PPOStateManager:
-    def __init__(self, train_config: PPOTrainConfig, state: PPOState):
-        self.state = state
+    HANDLED_COMPONENTS = {'start_generation', 'model', 'loss_module', 'optimizer', 'checkpointer', 'logger', 'scaler', 'lr_scheduler'}
+
+    def __init__(self, train_config: PPOTrainConfig):
         self.train_config = train_config
 
-    def restore_checkpoint(self, checkpoint):
+    def restore_checkpoint(self, state: dict, checkpoint):
         # Restore required components
-        self.state.start_generation = int(checkpoint["generation"])
-        self.state.model.load_state_dict(checkpoint["model_state_dict"])
-        self.state.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        state['start_generation'] = int(checkpoint["generation"])
+        state['model'].load_state_dict(checkpoint["model_state_dict"])
+        state['optimizer'].load_state_dict(checkpoint["optimizer_state_dict"])
+
 
         # Restore optional components
         if "scaler_state_dict" in checkpoint:
-            if self.state.scaler is not None:
-                scaler = self.state.scaler
+            if state.get('scaler', None) is not None:
+                scaler = state['scaler']
             else:
                 scaler = torch.amp.GradScaler(enabled=(self.train_config.amp_dtype == torch.float16))
-                self.state.scaler = scaler
+                state['scaler'] = scaler
             scaler.load_state_dict(checkpoint["scaler_state_dict"])
 
-        if self.state.logger is not None:
-            self.state.logger.revert("generation", self.state.start_generation)
+        if state.get('logger', None) is not None:
+            state['logger'].revert("generation", state['start_generation'])
 
-        if self.state.lr_scheduler is not None and "lr_scheduler_state_dict" in checkpoint:
-            self.state.lr_scheduler.load_state_dict(checkpoint["lr_scheduler_state_dict"])
+        if state.get('lr_scheduler', None) is not None and "lr_scheduler_state_dict" in checkpoint:
+            state['lr_scheduler'].load_state_dict(checkpoint["lr_scheduler_state_dict"])
 
-        return self.state
+        # Try restoring any other components
+        for key in checkpoint.keys():
+            suffix_len = len('_state_dict')
+            if key.endswith('_state_dict') and key[:-suffix_len] not in self.HANDLED_COMPONENTS:
+                component = state[key[:-suffix_len]]
+                if hasattr(component, 'load_state_dict'):
+                    component.load_state_dict(checkpoint[key])
+
+        return state
             
-    def reset_state(self):
+    def reset_state(self, state: dict):
         # Reset required components
-        self.state.start_generation = 0
+        state['start_generation'] = 0
 
         # Reset optional components
-        if self.state.logger is not None:
-            self.state.logger.reset()
-        if self.state.checkpointer is not None:
-            self.state.checkpointer.reset()
+        if state.get('logger', None) is not None:
+            state['logger'].reset()
+        if state.get('checkpointer', None) is not None:
+            state['checkpointer'].reset()
 
-        return self.state
+        return state

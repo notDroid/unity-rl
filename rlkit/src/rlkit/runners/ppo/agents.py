@@ -37,7 +37,7 @@ class PPOAgentBuilder:
             head_in_keys = config.agent.get('head_in_keys') or (obs_keys if not trunk_net else ['hidden_features'])
             obs_keys = list(obs_keys); hidden_keys = list(hidden_keys); head_in_keys = list(head_in_keys)    
             
-            policy_params = todict(config.agent.get('policy_params')) or {}
+            policy_params = todict(config.agent.policy_params) if 'policy_params' in config.agent else {}
             policy_operator = self._build_policy(policy_net, action_type, head_in_keys, policy_params)
             value_operator = ValueOperator(value_net, in_keys=head_in_keys)
 

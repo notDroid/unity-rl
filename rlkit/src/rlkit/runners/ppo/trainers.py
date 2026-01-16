@@ -4,7 +4,7 @@ todict = lambda x: OmegaConf.to_container(x, resolve=True)
 
 class PPOTrainerBuilder:
     def build(self, config: DictConfig, create_env, state):
-        raise self._make_ppo_trainer(config, create_env, state)
+        return self._make_ppo_trainer(config, create_env, state)
     
     def _make_ppo_trainer(self, config, create_env, state):
         # Train config

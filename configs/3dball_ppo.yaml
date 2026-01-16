@@ -1,5 +1,8 @@
 conf_name: conf1
 run_name: run1 # Variable per run of the same config
+algo:
+  name: ppo
+  runner: rlkit.runners.ppo.PPORunner
 
 # 1. Environment
 defaults:
@@ -11,49 +14,77 @@ env:
   params:
     time_scale: 10
 
-# 2. Algorithm
-algo:
-  name: ppo
-  _target_: runners.ppo.PPORunner
-  params:
-    epsilon: 0.2
-    entropy_coef: 1e-3
-    gamma: 0.99
+# 2. Agent
+agent:
+  builder: rlkit.runners.ppo.PPOAgentBuilder
+  policy_net:
+    _target_: rlkit.models.MLP
+    in_features: ${env.observation.dim}
+    out_features: ${eval:'2 * ${env.action.dim}'}
+    n_blocks: 1
+    hidden_dim: 8
+  value_net:
+    _target_: rlkit.models.MLP
+    in_features: ${env.observation.dim}
+    out_features: 1
+    n_blocks: 1
+    hidden_dim: 8
 
+# 3. Loss
+loss:
+  builder: rlkit.runners.ppo.PPOLossBuilder
+  loss: torchrl.objectives.ClipPPOLoss
+  loss_params:
+    epsilon: 0.2
+    entropy_coeff: 1e-2
+  value_estimator_params:
+    gamma: 0.99
+    lmbda: 0.95
+
+# 4. Trainer
 trainer:
-  _target_: rlkit.templates.PPOBasic
+  builder: rlkit.runners.ppo.PPOTrainerBuilder
   params:
     generations: 100
-    generation_size: 12_000
-    slice_len: 100
-    n_slices: 120
-    epochs: 2
+    generation_size: 6_000
+    slice_len: 128
+    n_slices: 1024
+    epochs: 5
     minibatch_size: 256
 
-    workers: 10
-    env_batch_dim: 1
+    workers: 5
+    env_batch_dim: ${env.info.batch_dims}
 
     kl_soft_clip: 0.02
     early_stop_threshold: 32
     kl_hard_clip: 0.05
 
-# 3. Model
-model:
-  _target_: rlkit.models.MLP
-  params:
-    in_features: "${env.observation.dim}"
-    out_features: "${env.action.dim}"
-    n_blocks: 1
-    hidden_dim: 32
+# 5. State
+state:
+  builder: rlkit.runners.ppo.PPOStateBuilder
+  components:
+    optimizer:
+      _target_: torch.optim.Adam
+      lr: ${state.components.lr_scheduler.initial_lr}
 
-# 4. State
-optimizer:
-  _target_: torch.optim.Adam
-  params:
-    lr: 1e-6 # Matches initial lr schedule
+    logger:
+      _target_: rlkit.utils.HFTBLogger
+      log_dir: ${dir}/logs/${run_name}
+      repo_id: ${repo_id}
+      repo_subfolder: ${dir}/logs/${run_name}
 
+    checkpointer:
+      _target_: rlkit.utils.HFCheckpointer
+      ckpt_path: ${dir}/ckpts
+      name: ${run_name}
+      repo_id: ${repo_id}
 
-### Utility
+    lr_scheduler:
+      _target_: rlkit.utils.CosineWithLinearWarmupSchedule
+      warmup_epochs: 5
+      total_epochs: ${trainer.params.generations}
+      initial_lr: 1e-5
+      max_lr: 1e-3
 
 # Change working directory
 dir: experiments/${env.name}/${algo.name}/${conf_name}
@@ -63,24 +94,3 @@ hydra:
     dir: ${dir}
 model_path: ${dir}/models/${run_name}.pt
 results_path: ${dir}/results/${run_name}.png
-
-# Logger
-logger:
-  _target_: rlkit.utils.HFTBLogger
-  log_dir: ${dir}/logs/${run_name}
-  repo_id: ${repo_id}
-  repo_subfolder: ${dir}/logs/${run_name}
-
-# Checkpointer
-checkpointer:
-  _target_: rlkit.utils.HFCheckpointer
-  ckpt_path: ${dir}/ckpts
-  name: ${run_name}
-  repo_id: ${repo_id}
-
-# LR Scheduler
-lr_scheduler:
-  _target_: rlkit.utils.CosineWithLinearWarmupSchedule
-  warmup_epochs: 1
-  initial_lr: 1e-6
-  max_lr: 1e-4

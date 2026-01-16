@@ -17,7 +17,7 @@ def create_trainer(config: DictConfig):
 
     # 1. Environment
     env_config = todict(config.env.params)
-    env_fn = OmegaConf(config.env.env_fn)
+    env_fn = get_method(config.env.env_fn)
     create_env = lambda: env_fn(config.env.name, **env_config)
 
     # 2. Agent
@@ -43,8 +43,8 @@ class PPORunner:
         ppo = create_trainer(config)
             
         # (Optional) HuggingFace Syncing
-        logger = ppo.state.get('logger', None)
-        checkpointer = ppo.state.get('checkpointer', None)
+        logger = ppo.state.logger if hasattr(ppo.state, 'logger') else None
+        checkpointer = ppo.state.checkpointer if hasattr(ppo.state, 'checkpointer') else None
         sync_interval = config.get("hf_sync_interval", None)
         sync_interval = None if sync_interval == 0 else sync_interval
         repo_id = config.get("repo_id", 'notnotDroid/unity-rl')
@@ -55,7 +55,7 @@ class PPORunner:
             upload_file(path_or_fileobj=config_path, path_in_repo=config_path, repo_id=repo_id, repo_type="model", commit_message="config upload")
 
         ### Run PPO
-        for gen in range(ppo.config.start_generation, ppo.config.generations):
+        for gen in range(ppo.state.start_generation, ppo.config.generations):
             ppo.step(gen)
             if sync_interval is not None and ((gen+1) % sync_interval == 0):
                 if logger: logger.sync_to_hub()

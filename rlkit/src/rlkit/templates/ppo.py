@@ -22,7 +22,7 @@ class PPOCollectorModule:
         # -------------- Collector Utility --------------
         if self.config.workers > 1:
             self.collector = MultiSyncDataCollector(
-                [self.create_env]*self.config.workers, self.state.model.get_policy_operator(), 
+                [self.create_env]*self.config.workers, self.state.agent.get_policy_operator(), 
                 frames_per_batch=self.config.collector_buffer_size, 
                 total_frames=-1, 
                 env_device="cpu", device=self.config.device, storing_device=self.config.storage_device, 
@@ -31,7 +31,7 @@ class PPOCollectorModule:
             )
         else:
             self.collector = SyncDataCollector(
-                self.create_env, self.state.model.get_policy_operator(), 
+                self.create_env, self.state.agent.get_policy_operator(), 
                 frames_per_batch=self.config.collector_buffer_size, 
                 total_frames=-1, 
                 env_device="cpu", device=self.config.device, storing_device=self.config.storage_device,
@@ -54,7 +54,7 @@ class PPOCollectorModule:
 
     def step(self):
         if self.config.workers > 1: self.collector.update_policy_weights_() # Update weights manually
-        self.state.model.eval()
+        self.state.agent.eval()
         self.buffer.empty()
 
         # Buffer in memory then move to memory mapped storage in loop
@@ -79,7 +79,7 @@ class PPOTrainModule:
 
         self.trunk = None
         if ppo_config.trunk:
-            self.trunk = self.state.model.module[0]
+            self.trunk = self.state.agent.module[0]
 
     def step(self, batch, epoch, j):
         # -------------- a. Compute Loss --------------
@@ -129,7 +129,7 @@ class PPOTrainModule:
         }
     
     def train(self):
-        self.state.model.train()
+        self.state.agent.train()
         self.early_stop = 0
 
         for epoch in range(self.config.epochs):
@@ -164,7 +164,7 @@ class PPOAdvantageModule:
         if not self.state.metric_module: self.state.metric_module = SimpleMetricModule(mode="approx")
 
     def step(self):    
-        self.state.model.eval()
+        self.state.agent.eval()
         self.train_module.buffer.empty()
         self.metrics = dict()
 
@@ -249,7 +249,7 @@ class PPOBasic:
     def _ckpt_step(self, gen, metrics):
         state_obj = {
             "generation": gen + 1,
-            "model_state_dict": self.state.model.state_dict(),
+            "agent_state_dict": self.state.agent.state_dict(),
             "optimizer_state_dict": self.state.optimizer.state_dict(),
             "scaler_state_dict": self.state.scaler.state_dict(),
         }
@@ -271,12 +271,12 @@ class PPOBasic:
         except: pass
         if model_path: 
             state_obj = {
-                "model_state_dict": self.state.model.state_dict(),
+                "agent_state_dict": self.state.agent.state_dict(),
             }
             atomic_torch_save(state_obj, path=model_path)
 
-    def model(self): 
-        return self.state.model
+    def agent(self): 
+        return self.state.agent
     
     def history(self):
         return self.state.logger.dataframe()
