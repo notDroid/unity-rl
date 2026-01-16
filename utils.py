@@ -3,7 +3,7 @@ import torch
 
 from hydra.utils import get_class, instantiate
 from omegaconf import DictConfig, OmegaConf
-from runners.ppo import make_ppo_agent
+from runners.runner import make_ppo_agent
 
 from rlkit.utils import hf_hub_download_and_copy
 from huggingface_hub import HfFileSystem, upload_file

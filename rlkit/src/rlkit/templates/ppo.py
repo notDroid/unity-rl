@@ -8,16 +8,9 @@ from torchrl.data import ReplayBuffer, LazyMemmapStorage, SliceSamplerWithoutRep
 from torchrl.modules import ActorValueOperator, ValueOperator, ActorCriticWrapper
 
 # Util
-from .ppo_config import PPOTrainConfig, PPOState
+from .ppo_config import PPOTrainConfig
+from .ppo_state import PPOState
 from rlkit.utils import Stopwatch, Checkpointer, LoggerBase, SimpleMetricModule, atomic_torch_save
-
-ppo_log_keys = [
-    "timestep", "generation", "time", "collection_time", "train_time",  # Training Progress Metrics
-    "return", "episode_length",                                         # Performance Metrics (expected from metric module)
-    "entropy",                                                          # Exploration Metrics (expected from metric module)
-    "policy_loss", "kl_approx", "clip_fraction", "ESS",                 # Policy Metrics
-    "value_loss", "explained_variance",                                 # Value Metrics
-]
 
 ### Stateless Helpers
 class PPOCollectorModule:
@@ -85,12 +78,12 @@ class PPOTrainModule:
             self.state.scaler = torch.amp.GradScaler(enabled=(self.config.amp_dtype == torch.float16))
 
         self.trunk = None
-        if not isinstance(self.state.model, ActorCriticWrapper): # Assume only ActorCriticWrapper doesn't have trunk, add more later if needed
+        if ppo_config.trunk:
             self.trunk = self.state.model.module[0]
 
     def step(self, batch, epoch, j):
         # -------------- a. Compute Loss --------------
-        with torch.autocast(device_type=self.config.device_type, dtype=self.config.amp_dtype, enabled=(self.config.amp_dtype==torch.float16)):
+        with torch.autocast(device_type=self.config.device_type, dtype=self.config.amp_dtype, enabled=(self.config.amp_dtype!=torch.float32)):
             # Trunk forward pass if exists
             if self.trunk:
                 batch = self.trunk(batch)
@@ -289,5 +282,5 @@ class PPOBasic:
         return self.state.logger.dataframe()
     
     def run(self):
-        for gen in range(self.config.start_generation, self.config.generations):
+        for gen in range(self.state.start_generation, self.config.generations):
             self.step(gen)

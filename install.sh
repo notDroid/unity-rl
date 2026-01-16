@@ -6,7 +6,7 @@ conda create -n mlagents python=3.10.12 -y
 
 echo ""
 echo "--- Installing Grpcio (Conda Forge) ---"
-conda install -n mlagents "grpcio=1.48.2" -c conda-forge -y
+conda install -n mlagents -c anaconda grpcio=1.48.2 -y
 
 echo ""
 echo "--- Installing ML-Agents (Sequential install to bypass resolver) ---"
@@ -14,7 +14,7 @@ conda run -n mlagents python -m pip install mlagents==1.1.0
 
 echo ""
 echo "--- Overwriting Numpy ---"
-conda run -n mlagents python -m pip install numpy==2.2.6
+conda run -n mlagents python -m pip install -U numpy
 
 echo ""
 echo "--- Installing Toolkit ---"

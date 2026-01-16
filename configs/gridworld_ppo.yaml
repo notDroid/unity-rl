@@ -40,6 +40,8 @@ trainer:
     early_stop_threshold: 32
     kl_hard_clip: 0.05
 
+    trunk: true
+
 # 3. Model
 trunk:
   _target_: rlkit.models.ConditionalCNN

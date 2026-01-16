@@ -2,15 +2,6 @@ from dataclasses import dataclass, field
 from math import ceil
 
 import torch
-from tensordict.nn import TensorDictModule
-from torchrl.modules import ProbabilisticActor, ActorValueOperator, ActorCriticWrapper
-from torch.optim import Optimizer
-from torch.optim.lr_scheduler import LRScheduler
-from torchrl.objectives import ClipPPOLoss
-
-from typing import Optional
-from rlkit.utils import Checkpointer, LoggerBase, SimpleMetricModule
-
 
 '''
 Required Config:
@@ -39,9 +30,6 @@ class PPOTrainConfig:
     epochs: int
     minibatch_size: int
 
-    # Optional Start Generation
-    start_generation: int = 0
-
     # Optional parameters with defaults    
     workers: int = 1
     device: str = "cpu"
@@ -61,6 +49,8 @@ class PPOTrainConfig:
     max_grad_norm: float = 1.0
     adv_clip: float = 5.0
 
+    trunk: bool = False
+
     # Derived Attributes
     timesteps: int = field(init=False)
     collector_iters_per_gen: int = field(init=False)
@@ -71,21 +61,15 @@ class PPOTrainConfig:
         if self.collector_buffer_size is None:
             self.collector_buffer_size = self.generation_size
 
-        self.timesteps = self.generation_size * (self.generations - self.start_generation)
         self.collector_iters_per_gen = int(ceil(self.generation_size / self.collector_buffer_size))
 
         self.device_type = "cuda" if str(self.device).startswith("cuda") else "cpu"
         self.amp_dtype = torch.float16 if self.device_type == "cuda" else torch.float32
 
-# PPO State to Save
-@dataclass
-class PPOState:
-    model: ActorValueOperator | ActorCriticWrapper
-    loss_module: ClipPPOLoss
-    optimizer: Optimizer
-
-    checkpointer: Optional[Checkpointer] = None
-    logger: Optional[LoggerBase] = None
-    scaler: Optional[torch.amp.GradScaler] = None
-    metric_module: Optional[SimpleMetricModule] = None
-    lr_scheduler: Optional[LRScheduler] = None
+ppo_log_keys = [
+    "timestep", "generation", "time", "collection_time", "train_time",  # Training Progress Metrics
+    "return", "episode_length",                                         # Performance Metrics (expected from metric module)
+    "entropy",                                                          # Exploration Metrics (expected from metric module)
+    "policy_loss", "kl_approx", "clip_fraction", "ESS",                 # Policy Metrics
+    "value_loss", "explained_variance",                                 # Value Metrics
+]
