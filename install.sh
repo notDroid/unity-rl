@@ -6,7 +6,7 @@ conda create -n mlagents python=3.10.12 -y
 
 echo ""
 echo "--- Installing Grpcio (Conda Forge) ---"
-conda install -n mlagents -c anaconda grpcio=1.48.2 -y
+conda install -n mlagents -c anaconda --override-channels grpcio=1.48.2 -y
 
 echo ""
 echo "--- Installing ML-Agents (Sequential install to bypass resolver) ---"
