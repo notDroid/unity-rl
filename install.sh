@@ -18,7 +18,7 @@ conda run -n mlagents python -m pip install -U numpy
 
 echo ""
 echo "--- Installing Toolkit ---"
-conda run -n mlagents python -m pip install pandas matplotlib ipykernel hydra-core seaborn huggingface_hub torchinfo
+conda run -n mlagents python -m pip install pandas matplotlib ipykernel hydra-core seaborn huggingface_hub torchinfo tensorboard
 
 echo ""
 echo "--- Installing PyTorch & TorchRL ---"
