@@ -26,9 +26,13 @@ class UnnestTransform(Transform):
         return tensordict_reset
 
     def _inv_call(self, tensordict):
-        for in_key, out_key in zip(self.in_keys_inv, self.out_keys_inv):
-            if in_key in tensordict.keys(True):
-                tensordict.rename_key_(in_key, out_key)
+        # for in_key, out_key in zip(self.in_keys_inv, self.out_keys_inv):
+        #     if in_key in tensordict.keys(True):
+        #         tensordict.rename_key_(in_key, out_key)
+        keys = list(tensordict.keys(True))
+        for key in keys:
+            if key in self.in_keys_inv or key in self.out_keys:
+                tensordict.rename_key_(key, (self.nested_key, key))
         return tensordict
     
 
@@ -46,6 +50,8 @@ class UnnestTransform(Transform):
             if in_key in spec.keys(True):
                 spec[out_key] = spec[in_key]
                 del spec[in_key]
+        if self.nested_key in spec.keys(True):
+            del spec[self.nested_key]
         return spec
 
     transform_observation_spec = _transform_spec
