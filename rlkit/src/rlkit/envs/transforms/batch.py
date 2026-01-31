@@ -72,9 +72,12 @@ def append_batch_transform(env: EnvBase) -> EnvBase:
     env = env.append_transform(stack).append_transform(batch)
 
     # 2. Unnest
-    keys = [*env.observation_keys, *env.action_keys, *env.reward_keys, *env.done_keys]
-    for i, key in enumerate(keys):
-        keys[i] = key[1]
-    unnest = UnnestTransform(temp_key, out_keys=keys)
-
+    out_keys = [*env.observation_keys, *env.reward_keys, *env.done_keys]
+    in_keys_inv = [*env.action_keys]
+    for i, key in enumerate(out_keys):
+        out_keys[i] = key[1]
+    for i, key in enumerate(in_keys_inv):
+        in_keys_inv[i] = key[1]
+    unnest = UnnestTransform(temp_key, out_keys=out_keys, in_keys_inv=in_keys_inv)
+    
     return env.append_transform(unnest)
