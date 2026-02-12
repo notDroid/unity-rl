@@ -130,14 +130,10 @@ This package contains reusable resources:
 
 ### **TODO**
 
-1. Finish models for vector environments (3DBall, Crawler, PushBlock, Walker, WallJump, Worm).
-2. Add support for visual environments (GridWorld, Match 3)
-3. Add support for multi agent environments (food collector, soccer twos, striker vs. goalie, co-op pushblock, dungeon escape)
-4. Add SAC
-5. Add support for sparse reward environments (hallway, pryamids)
-6. Add support for variable length observation environments (sorter)
-
-- Also add Docker support
+1. Add support for sparse reward environments (hallway, pryamids)
+2. Add SAC
+3. Add support for variable length observation environments (sorter)
+4. Add support for multi agent environments (food collector, soccer twos, striker vs. goalie, co-op pushblock, dungeon escape)
 
 ## **Training**
 
