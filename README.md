@@ -16,6 +16,8 @@ This repo contains examples of solving reinforcement learning scenarios from uni
   <img src="assets/WalkerModel.gif" alt="Row 2 Col 3" width="32%">
 </p>
 
+v1 is the current stable release of the project, v2 is currently in development. The project is currently transitioning between config versions so some models trained in the developing branch (main) may not work.
+
 ## **Quickstart**
 
 **1. Installation**
